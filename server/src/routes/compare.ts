@@ -1,0 +1,235 @@
+import { Router, type Request, type Response } from "express"
+import { and, eq, or } from "drizzle-orm"
+import { db } from "../../db"
+import { driverClassifications, drivers } from "../../db/migrations/schema"
+import { SITE_URL } from "../lib/constants"
+import { BaseApiResponse } from "../lib/definitions"
+import { executeQuery } from "../lib/executeQuery"
+import { apiNotFound } from "../lib/utils"
+
+const router = Router()
+
+interface DriverStats {
+  [driverId: string]: number
+}
+
+export interface ProcessedComparison {
+  totalRaces: number
+  championship: {
+    totalPoints: {
+      [driverId: string]: number | null
+    }
+    position: {
+      [driverId: string]: number | null
+    }
+  }
+  raceComparison: DriverStats
+  qualifyingComparison: DriverStats
+  wins: {
+    [driverId: string]: number | null
+  }
+  podiums: {
+    [driverId: string]: number | null
+  }
+  poles: {
+    [driverId: string]: number | null
+  }
+  pointFinishes: DriverStats
+  bestRaceFinish: DriverStats
+  bestGridPosition: DriverStats
+  dnfs: DriverStats
+}
+interface ApiResponse extends BaseApiResponse {
+  season: number | string
+  championshipId: string
+  drivers: DriverInfo[]
+  comparison: ProcessedComparison
+}
+
+type DriverInfo = {
+  driverId1?: string
+  driverId2?: string
+  name: string
+  surname: string
+  nationality: string
+  birthday: string
+  number: number | null
+  shortName: string | null
+  url: string | null
+  teamId: string | null
+}
+
+// GET /:year/compare/:driverId1/:driverId2
+router.get(
+  "/:year/compare/:driverId1/:driverId2",
+  async (req: Request, res: Response) => {
+    const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`
+    try {
+      const { year, driverId1, driverId2 } = req.params
+
+      const sql = `
+    SELECT
+      COUNT(r1.Race_ID) AS Total_Races,
+      SUM(CASE WHEN r1.Grid_Position < r2.Grid_Position THEN 1 ELSE 0 END) AS Driver1_BetterQualifying,
+      SUM(CASE WHEN r2.Grid_Position < r1.Grid_Position THEN 1 ELSE 0 END) AS Driver2_BetterQualifying,
+      MIN(r1.Grid_Position) AS Driver1_BestQualifying,
+      MIN(r2.Grid_Position) AS Driver2_BestQualifying,
+      SUM(CASE WHEN r1.Finishing_Position < r2.Finishing_Position THEN 1 ELSE 0 END) AS Driver1_BetterRaceFinish,
+      SUM(CASE WHEN r2.Finishing_Position < r1.Finishing_Position THEN 1 ELSE 0 END) AS Driver2_BetterRaceFinish,
+      MIN(r1.Finishing_Position) AS Driver1_BestRaceFinish,
+      MIN(r2.Finishing_Position) AS Driver2_BestRaceFinish,
+      SUM(CASE WHEN r1.Finishing_Position <= 10 THEN 1 ELSE 0 END) AS Driver1_PointFinishes,
+      SUM(CASE WHEN r2.Finishing_Position <= 10 THEN 1 ELSE 0 END) AS Driver2_PointFinishes,
+      SUM(CASE WHEN r1.Finishing_Position <= 3 THEN 1 ELSE 0 END) AS Driver1_Podiums,
+      SUM(CASE WHEN r2.Finishing_Position <= 3 THEN 1 ELSE 0 END) AS Driver2_Podiums,
+      SUM(CASE WHEN r1.Grid_Position = 1 THEN 1 ELSE 0 END) AS Driver1_Poles,
+      SUM(CASE WHEN r2.Grid_Position = 1 THEN 1 ELSE 0 END) AS Driver2_Poles,
+      SUM(CASE WHEN r1.Retired IS NOT NULL AND TRIM(r1.Retired) <> '' THEN 1 ELSE 0 END) AS Driver1_DNFs,
+      SUM(CASE WHEN r2.Retired IS NOT NULL AND TRIM(r2.Retired) <> '' THEN 1 ELSE 0 END) AS Driver2_DNFs
+    FROM Results r1
+    JOIN Results r2 ON r1.Race_ID = r2.Race_ID AND r2.Driver_ID = ?
+    JOIN Races rr ON rr.Race_ID = r1.Race_ID
+    WHERE r1.Driver_ID = ?
+      AND rr.Championship_ID = ?;
+    `
+
+      const driversPointsData = await db
+        .select()
+        .from(driverClassifications)
+        .innerJoin(
+          drivers,
+          eq(drivers.driverId, driverClassifications.driverId)
+        )
+        .where(
+          and(
+            eq(driverClassifications.championshipId, `f1_${year}`),
+            or(
+              eq(driverClassifications.driverId, driverId1),
+              eq(driverClassifications.driverId, driverId2)
+            )
+          )
+        )
+        .limit(2)
+
+      const data = await executeQuery(sql, [
+        driverId1,
+        driverId2,
+        `f1_${year}`,
+      ])
+
+      if (data.length === 0) {
+        return apiNotFound(
+          res,
+          fullUrl,
+          "No results found for this drivers. Try with others, or other year."
+        )
+      }
+
+      const result = data[0]
+
+      const pointsMap = new Map<string, number>()
+      driversPointsData.forEach((entry: any) => {
+        pointsMap.set(entry.driverId, entry.points)
+      })
+
+      const driver1Points = driversPointsData[0].Driver_Classifications.points
+      const driver2Points = driversPointsData[1].Driver_Classifications.points
+
+      const driversInfo = [
+        {
+          driverId1: driverId1,
+          name: driversPointsData[0].Drivers.name,
+          surname: driversPointsData[0].Drivers.surname,
+          nationality: driversPointsData[0].Drivers.nationality,
+          birthday: driversPointsData[0].Drivers.birthday,
+          number: driversPointsData[0].Drivers.number,
+          shortName: driversPointsData[0].Drivers.shortName,
+          url: driversPointsData[0].Drivers.url,
+          teamId: driversPointsData[0].Driver_Classifications.teamId,
+        },
+        {
+          driverId2: driverId2,
+          name: driversPointsData[1].Drivers.name,
+          surname: driversPointsData[1].Drivers.surname,
+          nationality: driversPointsData[1].Drivers.nationality,
+          birthday: driversPointsData[1].Drivers.birthday,
+          number: driversPointsData[1].Drivers.number,
+          shortName: driversPointsData[1].Drivers.shortName,
+          url: driversPointsData[1].Drivers.url,
+          teamId: driversPointsData[1].Driver_Classifications.teamId,
+        },
+      ]
+
+      const processedData: ProcessedComparison = {
+        totalRaces: result.Total_Races,
+        championship: {
+          totalPoints: {
+            [driverId1]: driver1Points,
+            [driverId2]: driver2Points,
+          },
+          position: {
+            [driverId1]: driversPointsData[0].Driver_Classifications.position,
+            [driverId2]: driversPointsData[1].Driver_Classifications.position,
+          },
+        },
+        raceComparison: {
+          [driverId1]: result.Driver2_BetterRaceFinish,
+          [driverId2]: result.Driver1_BetterRaceFinish,
+        },
+        qualifyingComparison: {
+          [driverId1]: result.Driver2_BetterQualifying,
+          [driverId2]: result.Driver1_BetterQualifying,
+        },
+        wins: {
+          [driverId1]: driversPointsData[0].Driver_Classifications.wins,
+          [driverId2]: driversPointsData[1].Driver_Classifications.wins,
+        },
+        podiums: {
+          [driverId1]: result.Driver2_Podiums,
+          [driverId2]: result.Driver1_Podiums,
+        },
+        poles: {
+          [driverId1]: result.Driver2_Poles,
+          [driverId2]: result.Driver1_Poles,
+        },
+        pointFinishes: {
+          [driverId1]: result.Driver2_PointFinishes,
+          [driverId2]: result.Driver1_PointFinishes,
+        },
+        bestRaceFinish: {
+          [driverId1]: result.Driver2_BestRaceFinish,
+          [driverId2]: result.Driver1_BestRaceFinish,
+        },
+        bestGridPosition: {
+          [driverId1]: result.Driver2_BestQualifying,
+          [driverId2]: result.Driver1_BestQualifying,
+        },
+        dnfs: {
+          [driverId1]: result.Driver2_DNFs,
+          [driverId2]: result.Driver1_DNFs,
+        },
+      }
+
+      const response: ApiResponse = {
+        api: SITE_URL,
+        url: fullUrl,
+        season: parseInt(year),
+        championshipId: `f1_${year}`,
+        drivers: driversInfo,
+        comparison: processedData,
+      }
+
+      return res
+        .status(200)
+        .set({
+          "Cache-Control": "public, max-age=600, stale-while-revalidate=60",
+        })
+        .json(response)
+    } catch (error) {
+      console.log(error)
+      return res.status(500).json({ message: "Server error" })
+    }
+  }
+)
+
+export default router

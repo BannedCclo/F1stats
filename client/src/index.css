@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+
+@import '@fontsource/saira-condensed/700.css';
+@import '@fontsource/saira-condensed/800.css';
+@import '@fontsource/instrument-sans/400.css';
+@import '@fontsource/instrument-sans/500.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+@theme {
+  /* Surfaces */
+  --color-asphalt: #0a0a0b;
+  --color-carbon: #141417;
+  --color-graphite: #232329;
+  --color-chalk: #f2f2f0;
+  --color-smoke: #8a8a93;
+  --color-kerb: #e10600;
+  --color-kerb-dim: #8c0400;
+
+  /* Sector semantics */
+  --color-sector-purple: #b14cff;
+  --color-sector-green: #00d26a;
+  --color-sector-yellow: #ffd230;
+
+  /* Type */
+  --font-display: 'Saira Condensed', system-ui, sans-serif;
+  --font-body: 'Instrument Sans', system-ui, sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-asphalt);
+  color: var(--color-chalk);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere, no exceptions */
+:focus-visible {
+  outline: 2px solid var(--color-kerb);
+  outline-offset: 2px;
+}
+
+/* Kerb zebra — signature section divider / loading motif */
+.kerb-zebra {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-kerb) 0 10px,
+    var(--color-chalk) 10px 20px
+  );
+}
+
+/* Loading state: the zebra actually slides, like a barber pole under caution flags */
+.kerb-zebra-loading {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-kerb) 0 10px,
+    var(--color-chalk) 10px 20px
+  );
+  animation: kerb-slide 1.1s linear infinite;
+}
+
+@keyframes kerb-slide {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
