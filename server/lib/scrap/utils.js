@@ -2,6 +2,21 @@ export const generateRaceId = (race, year) => {
   return `${race}_${year}`
 }
 
+// Position/grid fields scraped from BBC are sometimes non-numeric
+// placeholders ("-" for a DNF's finishing position, "not available" for a
+// grid that never got set) rather than a real number.
+export const toIntOrNull = (value) => {
+  if (value === null || value === undefined) return null
+  const n = parseInt(value, 10)
+  return Number.isNaN(n) ? null : n
+}
+
+export const toFloatOrNull = (value) => {
+  if (value === null || value === undefined) return null
+  const n = parseFloat(value)
+  return Number.isNaN(n) ? null : n
+}
+
 // object array with the info of the current grid of the f1, includes drivers and his teams
 export const grid = [
   {
@@ -107,7 +122,6 @@ export const teamExceptions = ["red bull", "aston martin"]
 
 export const formatDriver = (driver) => {
   let driverId
-  console.log(driverId)
 
   if (exceptions.includes(driver)) {
     driverId = driver.replace(" ", "_")

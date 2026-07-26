@@ -1,13 +1,11 @@
-import { formatDriver, formatTeam, generateRaceId } from "./utils.js"
+import { formatDriver, formatTeam, toIntOrNull } from "./utils.js"
 import { clientWriter } from "../db.js"
+import { MIN_EXPECTED_ROWS } from "../sync/completeness.js"
 
-export const getQualyResults = async (year, race, page) => {
-  const raceId = generateRaceId(race, year)
-  //const raceId = "abu_dhabi_2025"
-
+/** @param raceId this app's DB race_id (may differ from `race`, the BBC URL slug — see lib/sync/raceSlugs.js) */
+export const getQualyResults = async (year, race, raceId, page) => {
   const url = `https://www.bbc.com/sport/formula1/${year}/${race}-grand-prix/results#Qualifying`
 
-  //const url = `https://www.bbc.com/sport/formula1/2025/abu-dhabi-grand-prix/results#Qualifying`
   await page.goto(url)
 
   await page.waitForSelector('table[aria-label="Qualification"]')
@@ -53,12 +51,17 @@ export const getQualyResults = async (year, race, page) => {
     return data
   })
 
+  if (results.length < MIN_EXPECTED_ROWS) {
+    console.warn(`  ! qualy ${raceId}: only ${results.length} rows scraped, expected a full grid — skipping insert, will retry`)
+    return results.length
+  }
+
   const formattedResults = results.map((result) => {
     return {
       Race_ID: raceId,
       Driver_ID: formatDriver(result.driver),
       Team_ID: formatTeam(result.team),
-      Grid_Position: result.position,
+      Grid_Position: toIntOrNull(result.position),
       Q1: result.q1Time || null,
       Q2: result.q2Time || null,
       Q3: result.q3Time || null,
@@ -66,31 +69,26 @@ export const getQualyResults = async (year, race, page) => {
   })
 
   console.log(formattedResults)
-  ;(async () => {
-    const QualyResults = await formattedResults
-    //Ensure the data is an array and has items before inserting
-    if (Array.isArray(QualyResults) && QualyResults.length > 0) {
-      for (const result of QualyResults) {
-        try {
-          await clientWriter.execute({
-            sql: `INSERT INTO Classifications (Driver_ID, Race_ID, Team_ID, Q1, Grid_Position, Q2, Q3) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Q1, :Grid_Position, :Q2, :Q3)`,
-            args: {
-              Driver_ID: result.Driver_ID,
-              Race_ID: raceId,
-              Team_ID: result.Team_ID,
-              Grid_Position: result.Grid_Position,
-              Q1: result.Q1,
-              Q2: result.Q2,
-              Q3: result.Q3,
-            },
-          })
-          console.log("Qualy Results inserted correctly")
-        } catch (error) {
-          console.error("Error inserting race results:", error)
-        }
-      }
-    } else {
-      console.log("Error inserting data")
+
+  for (const result of formattedResults) {
+    try {
+      await clientWriter.execute({
+        sql: `INSERT INTO Classifications (Driver_ID, Race_ID, Team_ID, Q1, Grid_Position, Q2, Q3) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Q1, :Grid_Position, :Q2, :Q3) ON CONFLICT (Race_ID, Driver_ID) DO NOTHING`,
+        args: {
+          Driver_ID: result.Driver_ID,
+          Race_ID: raceId,
+          Team_ID: result.Team_ID,
+          Grid_Position: result.Grid_Position,
+          Q1: result.Q1,
+          Q2: result.Q2,
+          Q3: result.Q3,
+        },
+      })
+      console.log("Qualy Results inserted correctly")
+    } catch (error) {
+      console.error("Error inserting race results:", error)
     }
-  })()
+  }
+
+  return results.length
 }

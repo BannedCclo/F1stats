@@ -1,11 +1,10 @@
-import { generateRaceId, formatDriver, formatTeam } from "./utils.js"
+import { formatDriver, formatTeam, toIntOrNull, toFloatOrNull } from "./utils.js"
 import { clientWriter } from "../db.js"
+import { MIN_EXPECTED_ROWS } from "../sync/completeness.js"
 
-export const getRaceResults = async (year, race, page) => {
-  const raceId = generateRaceId(race, year)
-  //const raceId = "abu_dhabi_2025"
+/** @param raceId this app's DB race_id (may differ from `race`, the BBC URL slug — see lib/sync/raceSlugs.js) */
+export const getRaceResults = async (year, race, raceId, page) => {
   const url = `https://www.bbc.com/sport/formula1/${year}/${race}-grand-prix/results`
-  //const url = `https://www.bbc.com/sport/formula1/2025/abu-dhabi-grand-prix/results#Race`
 
   await page.goto(url)
 
@@ -57,15 +56,20 @@ export const getRaceResults = async (year, race, page) => {
     return data
   })
 
+  if (results.length < MIN_EXPECTED_ROWS) {
+    console.warn(`  ! race ${raceId}: only ${results.length} rows scraped, expected a full grid — skipping insert, will retry`)
+    return results.length
+  }
+
   const formattedResults = results.map((result) => {
     return {
       Race_ID: raceId,
       Driver_ID: formatDriver(result.driver),
       Team_ID: formatTeam(result.team),
-      Finishing_Position: result.position,
-      Grid_Position: result.gridPosition,
+      Finishing_Position: toIntOrNull(result.position),
+      Grid_Position: toIntOrNull(result.gridPosition),
       Race_Time: result.raceTime,
-      Points_Obtained: parseInt(result.points),
+      Points_Obtained: toFloatOrNull(result.points),
       fast_lap: result.lapTime,
     }
   })
@@ -92,55 +96,51 @@ export const getRaceResults = async (year, race, page) => {
 
   console.log(formattedResults)
   console.log(fastestLap)
-  ;(async () => {
-    const RaceResults = await formattedResults
-    // Ensure the data is an array and has items before inserting
-    if (Array.isArray(RaceResults) && RaceResults.length > 0) {
-      for (const result of RaceResults) {
-        try {
-          await clientWriter.execute({
-            sql: `INSERT INTO Results (Driver_ID, Race_ID, Team_ID, Finishing_Position, Grid_Position, Race_Time, Points_Obtained, fast_lap) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Finishing_Position, :Grid_Position, :Race_Time, :Points_Obtained, :fast_lap)`,
-            args: {
-              Driver_ID: result.Driver_ID,
-              Race_ID: raceId,
-              Team_ID: result.Team_ID,
-              Finishing_Position: result.Finishing_Position,
-              Grid_Position: result.Grid_Position,
-              Race_Time: result.Race_Time,
-              Points_Obtained: result.Points_Obtained,
-              fast_lap: result.fast_lap ? result.fast_lap : null,
-            },
-          })
-          console.log("Race Results inserted correctly")
-        } catch (error) {
-          console.error("Error inserting race results:", error)
-        }
-        try {
-          await clientWriter.execute({
-            sql: `UPDATE Races
-            SET
-              Winner_ID = :Winner_ID,
-              fast_lap = :fast_lap,
-              fast_lap_driver_id = :fast_lap_driver_id,
-              fast_lap_team_id = :fast_lap_team_id,
-              Team_Winner_ID = :Team_Winner_ID
-            WHERE Race_ID = :Race_ID`,
-            args: {
-              Winner_ID: formattedResults[0].Driver_ID,
-              fast_lap: fastestLap.lapTime,
-              fast_lap_driver_id: fastestLap.driverId,
-              fast_lap_team_id: fastestLap.teamId,
-              Team_Winner_ID: formattedResults[0].Team_ID,
-              Race_ID: raceId,
-            },
-          })
-          console.log("Races updated correctly")
-        } catch (error) {
-          console.error("Error updating races", error)
-        }
-      }
-    } else {
-      console.log("Error inserting data")
+
+  for (const result of formattedResults) {
+    try {
+      await clientWriter.execute({
+        sql: `INSERT INTO Results (Driver_ID, Race_ID, Team_ID, Finishing_Position, Grid_Position, Race_Time, Points_Obtained, fast_lap) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Finishing_Position, :Grid_Position, :Race_Time, :Points_Obtained, :fast_lap) ON CONFLICT (Race_ID, Driver_ID) DO NOTHING`,
+        args: {
+          Driver_ID: result.Driver_ID,
+          Race_ID: raceId,
+          Team_ID: result.Team_ID,
+          Finishing_Position: result.Finishing_Position,
+          Grid_Position: result.Grid_Position,
+          Race_Time: result.Race_Time,
+          Points_Obtained: result.Points_Obtained,
+          fast_lap: result.fast_lap ? result.fast_lap : null,
+        },
+      })
+      console.log("Race Results inserted correctly")
+    } catch (error) {
+      console.error("Error inserting race results:", error)
     }
-  })()
+  }
+
+  try {
+    await clientWriter.execute({
+      sql: `UPDATE Races
+      SET
+        Winner_ID = :Winner_ID,
+        fast_lap = :fast_lap,
+        fast_lap_driver_id = :fast_lap_driver_id,
+        fast_lap_team_id = :fast_lap_team_id,
+        Team_Winner_ID = :Team_Winner_ID
+      WHERE Race_ID = :Race_ID`,
+      args: {
+        Winner_ID: formattedResults[0].Driver_ID,
+        fast_lap: fastestLap.lapTime,
+        fast_lap_driver_id: fastestLap.driverId,
+        fast_lap_team_id: fastestLap.teamId,
+        Team_Winner_ID: formattedResults[0].Team_ID,
+        Race_ID: raceId,
+      },
+    })
+    console.log("Races updated correctly")
+  } catch (error) {
+    console.error("Error updating races", error)
+  }
+
+  return results.length
 }

@@ -1,13 +1,11 @@
 import { clientWriter } from "../db.js"
-import { generateRaceId, formatDriver, formatTeam } from "./utils.js"
+import { formatDriver, formatTeam } from "./utils.js"
+import { MIN_EXPECTED_ROWS } from "../sync/completeness.js"
 
-export const getPracticeResults = async (year, race, page) => {
-  const raceId = generateRaceId(race, year)
-  // const raceId = "australian_2026"
-
+/** @param raceId this app's DB race_id (may differ from `race`, the BBC URL slug — see lib/sync/raceSlugs.js) */
+export const getPracticeResults = async (year, race, raceId, page) => {
   const url = `https://www.bbc.com/sport/formula1/${year}/${race}-grand-prix/results#Practice`
 
-  // const url = `https://www.bbc.com/sport/formula1/2025/abu-dhabi-grand-prix/results#Practice`
   await page.goto(url)
 
   await page.waitForSelector("#Practice")
@@ -19,19 +17,10 @@ export const getPracticeResults = async (year, race, page) => {
     const fp2Table = document.querySelector(
       `#Practice table[aria-label="Second Practice"]`,
     )
-
-    //disable fp3 results until saturday
     const fp3Table = document.querySelector(
       `#Practice table[aria-label="3rd Practice"]`,
     )
 
-    // const data = []
-    // const tables = [fp1Table, fp2Table, fp3Table]
-
-    // Saturday results (fp3)
-    // const fp3Table = document.querySelector(
-    //   `#Practice table[aria-label="3rd Practice"]`
-    // )
     const data = []
     const tables = [fp1Table, fp2Table, fp3Table]
 
@@ -67,50 +56,37 @@ export const getPracticeResults = async (year, race, page) => {
     return data
   })
 
-  const formattedResults = results.map((result) => {
-    return {
-      session: result.session,
-      //session: "FP1",
-      Race_ID: raceId,
-      Driver_ID: formatDriver(result.driver),
-      Team_ID: formatTeam(result.team),
-      Time: result.time,
-    }
-  })
+  const bySession = { FP1: [], FP2: [], FP3: [] }
+  for (const result of results) {
+    bySession[result.session]?.push(result)
+  }
 
-  console.log(formattedResults)
-  ;(async () => {
-    const fpResults = await formattedResults
-    // Ensure the data is an array and has items before inserting
-    if (Array.isArray(fpResults) && fpResults.length > 0) {
-      try {
-        for (const fp of fpResults) {
-          let tableName
-          if (fp.session === "FP1") {
-            tableName = "FP1"
-          } else if (fp.session === "FP2") {
-            tableName = "FP2"
-          } else if (fp.session === "FP3") {
-            tableName = "FP3"
-          }
-          if (tableName) {
-            await clientWriter.execute({
-              sql: `INSERT INTO ${tableName} (Driver_ID, Race_ID, Team_ID, Time) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Time)`,
-              args: {
-                Driver_ID: fp.Driver_ID,
-                Race_ID: raceId,
-                Team_ID: fp.Team_ID,
-                Time: fp.Time,
-              },
-            })
-          }
-        }
-        console.log("FP Results inserted correctly")
-      } catch (error) {
-        console.error("Error inserting data:", error)
-      }
-    } else {
-      console.error("No valid data to insert")
+  const counts = {}
+  for (const [tableName, rows] of Object.entries(bySession)) {
+    counts[tableName] = rows.length
+    if (rows.length === 0) continue // session hasn't run yet — nothing to insert
+    if (rows.length < MIN_EXPECTED_ROWS) {
+      console.warn(`  ! ${tableName} ${raceId}: only ${rows.length} rows scraped, expected a full grid — skipping insert, will retry`)
+      continue
     }
-  })()
+
+    for (const result of rows) {
+      try {
+        await clientWriter.execute({
+          sql: `INSERT INTO ${tableName} (Driver_ID, Race_ID, Team_ID, Time) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Time) ON CONFLICT (Race_ID, Driver_ID) DO NOTHING`,
+          args: {
+            Driver_ID: formatDriver(result.driver),
+            Race_ID: raceId,
+            Team_ID: formatTeam(result.team),
+            Time: result.time,
+          },
+        })
+      } catch (error) {
+        console.error(`Error inserting ${tableName} data:`, error)
+      }
+    }
+    console.log(`${tableName} results inserted correctly`)
+  }
+
+  return counts
 }

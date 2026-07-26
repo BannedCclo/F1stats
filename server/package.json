@@ -12,7 +12,9 @@
     "insert": "cd lib/insert && node index.js",
     "insert:circuit-svgs": "node lib/insert/circuitSvgs.js",
     "scrap": "cd lib/scrap && node index.js",
-    "populate": "node lib/populate/index.js"
+    "populate": "node lib/populate/index.js",
+    "sync:check": "node scripts/check-active-sessions.js",
+    "sync:run": "node scripts/sync-active-sessions.js"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.5",

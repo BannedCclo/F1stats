@@ -1,135 +1,87 @@
-import { generateRaceId, formatDriver, formatTeam } from "../utils.js"
+import { formatDriver, formatTeam, toIntOrNull, toFloatOrNull } from "../utils.js"
 import { clientWriter } from "../../db.js"
+import { MIN_EXPECTED_ROWS } from "../../sync/completeness.js"
 
-export const getSprintRaceResults = async (year, race, page) => {
-  const raceId = generateRaceId(race, year)
-  //const raceId = "qatar_2024"
-  const raceNumber = 1265 // Refers to the race number of the grand prix, its the id of the f1 page
-  const url = `https://www.formula1.com/en/results/${year}/races/${raceNumber}/${race}/sprint-results`
+// See sprint/qualy.js for why this matches by class-name fragment instead of
+// a fixed `td div` column index.
+function extractRows() {
+  const table = document.querySelector('table[aria-label="Sprint"]')
+  if (!table) return []
+  const rows = table.querySelectorAll("tbody tr")
+  const data = []
 
-  await page.goto(url)
+  rows.forEach((row) => {
+    const cells = row.querySelectorAll("td")
+    const values = [...cells].map((td) => td.querySelector('span[aria-hidden="true"]')?.innerText.trim() ?? null)
 
-  await page.waitForSelector(
-    'table[class="f1-table f1-table-with-data w-full"]'
-  )
-
-  const results = await page.evaluate(() => {
-    const table = document.querySelector(
-      'table[class="f1-table f1-table-with-data w-full"]'
-    )
-    const rows = table?.querySelectorAll("tbody tr")
-    const data = []
-
-    rows?.forEach((row) => {
-      const columns = row.querySelectorAll("td p")
-      const position = columns[0]?.innerText.split("\n")[0].trim() || null
-      const driver = columns[2]?.innerText.trim().toLowerCase() || null
-      const team = columns[3]?.innerText.trim().toLowerCase() || null
-      const laps = columns[4]?.innerText.trim().toLowerCase() || null
-      const raceTime = columns[5]?.innerText.split("\n")[0].trim() || null
-      const points = columns[6]?.innerText.split("\n")[0].trim() || null
-
-      data.push({
-        position,
-        driver,
-        team,
-        laps,
-        raceTime,
-        points,
-      })
-    })
-
-    return data
-  })
-
-  // now we need to get the sprint grid position
-  const sprintUrl = `https://www.formula1.com/en/results/${year}/races/${raceNumber}/${race}/sprint-grid`
-  await page.goto(sprintUrl)
-
-  await page.waitForSelector(
-    'table[class="f1-table f1-table-with-data w-full"]'
-  )
-
-  const qualyResults = await page.evaluate(() => {
-    const table = document.querySelector(
-      'table[class="f1-table f1-table-with-data w-full"]'
-    )
-    const rows = table?.querySelectorAll("tbody tr")
-    const data = []
-
-    rows?.forEach((row) => {
-      const columns = row.querySelectorAll("td p")
-      const gridPosition = columns[0]?.innerText.split("\n")[0].trim() || null
-      const driver = columns[2]?.innerText.trim().toLowerCase() || null
-
-      data.push({
-        gridPosition,
-        driver,
-      })
-    })
-
-    return data
-  })
-
-  const sprintQualyResults = qualyResults.map((result) => {
-    return {
-      driverId: formatDriver(result.driver),
-      gridPosition: result.gridPosition,
-    }
-  })
-
-  const formattedResults = results.map((result) => {
-    return {
-      Race_ID: raceId,
-      Driver_ID: formatDriver(result.driver),
-      Team_ID: formatTeam(result.team, result.driver),
-      Finishing_Position: result.position,
-      Laps: result.laps,
-      Race_Time: result.raceTime,
-      Points_Obtained: parseInt(result.points), // Asumiendo que los puntos siempre son numéricos y en el formato "X"
-    }
-  })
-
-  // now, with the sprint grid and the sprint race results, we can merge them in one
-
-  const mergedResults = formattedResults.map((result) => {
-    // Find the matching sprint grid result for the driver
-    const sprintQualy = sprintQualyResults.find(
-      (qualy) => qualy.driverId === result.Driver_ID
-    )
-
-    // Return a new object with the merged data
-    return {
-      ...result, // Keep all existing properties
-      Grid_Position: sprintQualy?.gridPosition || null, // Add grid position if found, else null
-    }
-  })
-
-  //console.log(mergedResults)
-  ;(async () => {
-    const sprintRaceResults = await mergedResults
-
-    if (Array.isArray(sprintRaceResults) && sprintRaceResults.length > 0) {
-      for (const result of sprintRaceResults) {
-        try {
-          await clientWriter.execute({
-            sql: `INSERT INTO Sprint_Race (Driver_ID, Race_ID, Team_ID, Finishing_Position, Grid_Position, Laps, Race_Time, Points_Obtained) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Finishing_Position, :Grid_Position, :Laps, :Race_Time, :Points_Obtained)`,
-            args: {
-              Driver_ID: result.Driver_ID,
-              Race_ID: raceId,
-              Team_ID: result.Team_ID,
-              Finishing_Position: result.Finishing_Position,
-              Grid_Position: result.Grid_Position,
-              Laps: result.Laps,
-              Race_Time: result.Race_Time,
-              Points_Obtained: result.Points_Obtained,
-            },
-          })
-          console.log("Race Results inserted correctly")
-        } catch (error) {
-          console.error("Error inserting race results:", error)
-        }
+    const driverCell = [...cells].find((td) => td.querySelector("[data-driver-id]"))
+    let driver = null
+    let team = null
+    if (driverCell) {
+      for (const span of driverCell.querySelectorAll("span")) {
+        if (span.className.includes("FullName") && !span.className.includes("TeamFullName")) driver = span.innerText.trim().toLowerCase()
+        if (span.className.includes("TeamFullName")) team = span.innerText.trim().toLowerCase()
       }
     }
-  })()
+
+    // [rank, code, number, laps, time/gap, points]
+    const [position, , , laps, raceTime, points] = values
+    data.push({ position, driver, team, laps, raceTime, points })
+  })
+
+  return data
+}
+
+async function lookupSprintGridPosition(raceId, driverId) {
+  const { rows } = await clientWriter.execute({
+    sql: `SELECT grid_position FROM sprint_qualy WHERE race_id = :race_id AND driver_id = :driver_id LIMIT 1`,
+    args: { race_id: raceId, driver_id: driverId },
+  })
+  return rows[0]?.grid_position ?? null
+}
+
+/** @param raceId this app's DB race_id (may differ from `race`, the BBC URL slug — see lib/sync/raceSlugs.js) */
+export const getSprintRaceResults = async (year, race, raceId, page) => {
+  const url = `https://www.bbc.com/sport/formula1/${year}/${race}-grand-prix/results#Sprint`
+
+  await page.goto(url)
+  await page.waitForSelector('table[aria-label="Sprint"]', { state: "attached" })
+
+  const results = await page.evaluate(extractRows)
+
+  if (results.length < MIN_EXPECTED_ROWS) {
+    console.warn(`  ! sprint_race ${raceId}: only ${results.length} rows scraped, expected a full grid — skipping insert, will retry`)
+    return results.length
+  }
+
+  for (const result of results) {
+    const Driver_ID = formatDriver(result.driver)
+    const Team_ID = formatTeam(result.team, result.driver)
+    // BBC's sprint results table doesn't carry a starting-grid column; the
+    // sprint qualifying classification is the best available proxy (it won't
+    // reflect a post-qualifying grid penalty, which BBC doesn't publish
+    // separately for sprints).
+    const Grid_Position = await lookupSprintGridPosition(raceId, Driver_ID)
+
+    try {
+      await clientWriter.execute({
+        sql: `INSERT INTO Sprint_Race (Driver_ID, Race_ID, Team_ID, Finishing_Position, Grid_Position, Laps, Race_Time, Points_Obtained) VALUES (:Driver_ID, :Race_ID, :Team_ID, :Finishing_Position, :Grid_Position, :Laps, :Race_Time, :Points_Obtained) ON CONFLICT (Race_ID, Driver_ID) DO NOTHING`,
+        args: {
+          Driver_ID,
+          Race_ID: raceId,
+          Team_ID,
+          Finishing_Position: toIntOrNull(result.position),
+          Grid_Position,
+          Laps: toIntOrNull(result.laps),
+          Race_Time: result.raceTime,
+          Points_Obtained: toFloatOrNull(result.points),
+        },
+      })
+      console.log("Sprint race results inserted correctly")
+    } catch (error) {
+      console.error("Error inserting sprint race results:", error)
+    }
+  }
+
+  return results.length
 }
