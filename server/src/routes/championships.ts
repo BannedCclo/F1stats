@@ -1,15 +1,15 @@
 import { Router, type Request, type Response } from "express"
 import { asc, eq } from "drizzle-orm"
-import { db } from "../../db"
+import { db } from "../../db/index.js"
 import {
   constructorsClassifications,
   driverClassifications,
   drivers,
   teams,
-} from "../../db/migrations/schema"
-import { CURRENT_YEAR, SITE_NAME, SITE_URL } from "../lib/constants"
-import { BaseApiResponse } from "../lib/definitions"
-import { apiNotFound, getLimitAndOffset } from "../lib/utils"
+} from "../../db/migrations/schema.js"
+import { CURRENT_YEAR, SITE_NAME, SITE_URL } from "../lib/constants.js"
+import { BaseApiResponse } from "../lib/definitions.js"
+import { apiNotFound, getLimitAndOffset } from "../lib/utils.js"
 
 const router = Router()
 

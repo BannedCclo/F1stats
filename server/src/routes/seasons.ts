@@ -1,11 +1,11 @@
 import { Router, type Request, type Response } from "express"
 import { desc, InferModel } from "drizzle-orm"
-import { db } from "../../db"
-import { championships } from "../../db/migrations/schema"
-import { SITE_URL } from "../lib/constants"
-import { BaseApiResponse } from "../lib/definitions"
-import { apiNotFound, getLimitAndOffset } from "../lib/utils"
-import { getChampionshipDriverIds, getChampionshipTeamIds } from "../lib/participants"
+import { db } from "../../db/index.js"
+import { championships } from "../../db/migrations/schema.js"
+import { SITE_URL } from "../lib/constants.js"
+import { BaseApiResponse } from "../lib/definitions.js"
+import { apiNotFound, getLimitAndOffset } from "../lib/utils.js"
+import { getChampionshipDriverIds, getChampionshipTeamIds } from "../lib/participants.js"
 
 const router = Router()
 

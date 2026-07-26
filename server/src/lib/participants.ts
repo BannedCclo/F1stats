@@ -1,10 +1,10 @@
 import { inArray } from "drizzle-orm"
-import { db } from "../../db"
+import { db } from "../../db/index.js"
 import {
   constructorsClassifications,
   driverClassifications,
   results,
-} from "../../db/migrations/schema"
+} from "../../db/migrations/schema.js"
 
 function groupToMap(
   rows: { key: string | null; value: string | null }[]

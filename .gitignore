@@ -51,6 +51,9 @@ lerna-debug.log*
 
 # vercel
 .vercel
+skills-lock.json
+server/.agents/
+server/.claude/
 
 # f1api.dev population script checkpoint
 server/lib/populate/.progress.json

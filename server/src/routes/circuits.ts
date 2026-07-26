@@ -1,10 +1,10 @@
 import { Router, type Request, type Response } from "express"
 import { eq, like, or } from "drizzle-orm"
-import { db } from "../../db"
-import { circuits, races } from "../../db/migrations/schema"
-import { SITE_NAME, SITE_URL } from "../lib/constants"
-import { BaseApiResponse } from "../lib/definitions"
-import { apiNotFound, circuitSvg, getLimitAndOffset } from "../lib/utils"
+import { db } from "../../db/index.js"
+import { circuits, races } from "../../db/migrations/schema.js"
+import { SITE_NAME, SITE_URL } from "../lib/constants.js"
+import { BaseApiResponse } from "../lib/definitions.js"
+import { apiNotFound, circuitSvg, getLimitAndOffset } from "../lib/utils.js"
 
 const router = Router()
 

@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express"
 import { and, asc, eq, InferModel, like, or } from "drizzle-orm"
-import { db } from "../../db"
+import { db } from "../../db/index.js"
 import {
   championships,
   circuits,
@@ -10,11 +10,11 @@ import {
   results,
   sprintRace,
   teams,
-} from "../../db/migrations/schema"
-import { CURRENT_YEAR, SITE_URL } from "../lib/constants"
-import { BaseApiResponse } from "../lib/definitions"
-import { apiNotFound, circuitSvg, getLimitAndOffset } from "../lib/utils"
-import { getDriverSeasons } from "../lib/participants"
+} from "../../db/migrations/schema.js"
+import { CURRENT_YEAR, SITE_URL } from "../lib/constants.js"
+import { BaseApiResponse } from "../lib/definitions.js"
+import { apiNotFound, circuitSvg, getLimitAndOffset } from "../lib/utils.js"
+import { getDriverSeasons } from "../lib/participants.js"
 
 const router = Router()
 

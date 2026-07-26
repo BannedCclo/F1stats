@@ -1,7 +1,7 @@
 import { format } from "date-fns"
 import { toZonedTime } from "date-fns-tz"
 import type { Response } from "express"
-import { SITE_URL } from "./constants"
+import { SITE_URL } from "./constants.js"
 
 // return error message when the api not found any result.
 export function apiNotFound(res: Response, url: string, message: string) {
