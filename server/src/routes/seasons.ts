@@ -5,13 +5,18 @@ import { championships } from "../../db/migrations/schema"
 import { SITE_URL } from "../lib/constants"
 import { BaseApiResponse } from "../lib/definitions"
 import { apiNotFound, getLimitAndOffset } from "../lib/utils"
+import { getChampionshipDriverIds, getChampionshipTeamIds } from "../lib/participants"
 
 const router = Router()
 
 type Championship = InferModel<typeof championships>
+type ChampionshipWithParticipants = Championship & {
+  driverIds: string[]
+  teamIds: string[]
+}
 
 interface SeasonsApiResponse extends BaseApiResponse {
-  championships: Championship[]
+  championships: ChampionshipWithParticipants[]
 }
 
 // GET /seasons
@@ -31,13 +36,26 @@ router.get("/seasons", async (req: Request, res: Response) => {
       return apiNotFound(res, fullUrl, "No seasons found.")
     }
 
+    const championshipIds = seasonsData.map((season) => season.championshipId)
+    const [driverIdsByChampionship, teamIdsByChampionship] = await Promise.all([
+      getChampionshipDriverIds(championshipIds),
+      getChampionshipTeamIds(championshipIds),
+    ])
+
+    const seasonsWithParticipants: ChampionshipWithParticipants[] =
+      seasonsData.map((season) => ({
+        ...season,
+        driverIds: driverIdsByChampionship.get(season.championshipId) ?? [],
+        teamIds: teamIdsByChampionship.get(season.championshipId) ?? [],
+      }))
+
     const response: SeasonsApiResponse = {
       api: SITE_URL,
       url: fullUrl,
       limit,
       offset,
-      total: seasonsData.length,
-      championships: seasonsData,
+      total: seasonsWithParticipants.length,
+      championships: seasonsWithParticipants,
     }
 
     return res

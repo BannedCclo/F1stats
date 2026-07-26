@@ -37,6 +37,16 @@ export const getLimitAndOffset = (queryParams: URLSearchParams) => {
   return { limit, offset }
 }
 
+/** Real track-outline SVG for a circuit, or null when it hasn't been curated yet. */
+export function circuitSvg(circuit: {
+  svgPath: string | null
+  svgViewBox: string | null
+}): { path: string; viewBox: string } | null {
+  return circuit.svgPath && circuit.svgViewBox
+    ? { path: circuit.svgPath, viewBox: circuit.svgViewBox }
+    : null
+}
+
 export function convertToTimezone(
   date: string | null,
   time: string | null,

@@ -1,4 +1,4 @@
-import { clientWriter } from "../turso.js"
+import { clientWriter } from "../db.js"
 import { generateRaceId, formatDriver, formatTeam } from "./utils.js"
 
 export const getPracticeResults = async (year, race, page) => {

@@ -25,6 +25,8 @@ export interface RawDriver {
   number: number | null
   shortName: string | null
   url: string
+  /** All championshipIds this driver has raced in. Only present on `/drivers`, `/drivers/search`, `/drivers/:id`. */
+  seasons?: string[]
 }
 
 export interface RawTeam {
@@ -155,50 +157,27 @@ export interface RawDriverByIdResponse {
   driver: RawDriver[]
 }
 
-/** Circuit shape as embedded inside a driver's per-season result entry — yet another field naming. */
-export interface RawEmbeddedCircuit {
-  circuitId: string
-  name: string
-  country: string
-  city: string
-  length: number
-  lapRecord: string
-  firstParticipationYear: number
-  numberOfCorners: number
-  fastestLapDriverId: string | null
-  fastestLapTeamId: string | null
-  fastestLapYear: number | null
+export interface RawDriverSeasonClassification {
+  championshipId: string
+  season: number | null
+  position: number | null
+  points: number | null
+  wins: number
+  team: {
+    teamId: string
+    teamName: string | null
+    country: string | null
+    url: string | null
+  } | null
 }
 
-export interface RawEmbeddedRace {
-  raceId: string
-  name: string
-  round: number
-  date: string
-  circuit: RawEmbeddedCircuit
-}
-
-export interface RawEmbeddedResult {
-  finishingPosition: number | string | null
-  gridPosition: number | string | null
-  raceTime: string | null
-  pointsObtained: number
-  retired: string | null
-}
-
-export interface RawDriverSeasonResultEntry {
-  race: RawEmbeddedRace
-  result: RawEmbeddedResult
-  sprintResult: RawEmbeddedResult | null
-}
-
-/** `/current/drivers/:id` and `/:year/drivers/:id` — driver + team + full nested season results. */
-export interface RawDriverDetailResponse extends RawPaginationEnvelope {
-  season?: number
-  championshipId?: string
-  driver: RawDriver
-  team: RawTeam | null
-  results: RawDriverSeasonResultEntry[]
+/** `/drivers/:id/classifications` — this driver's standing in every season they've raced. */
+export interface RawDriverClassificationsResponse {
+  api: string
+  url: string
+  driverId: string
+  total: number
+  classifications: RawDriverSeasonClassification[]
 }
 
 /** `/teams/:id`, `/current/teams/:id`, `/:year/teams/:id` — item is array-wrapped. */
@@ -210,17 +189,23 @@ export interface RawTeamDetailResponse {
   team: RawTeam[]
 }
 
-/** `/current/teams/:id/drivers`, `/:year/teams/:id/drivers`. */
-export interface RawTeamDriversResponse {
+export interface RawTeamSeasonClassification {
+  championshipId: string
+  season: number | null
+  position: number | null
+  points: number | null
+  wins: number
+  /** Always populated, even for the many early/minor entrants that never had a tracked constructors' championship position. */
+  racesEntered: number
+}
+
+/** `/teams/:id/classifications` — this team's standing in every season it competed. */
+export interface RawTeamClassificationsResponse {
   api: string
   url: string
-  total: number
-  limit: number
-  offset: number
-  season?: number
   teamId: string
-  team: RawTeam
-  drivers: { driver: RawDriver }[]
+  total: number
+  classifications: RawTeamSeasonClassification[]
 }
 
 export interface RawStandingItem {

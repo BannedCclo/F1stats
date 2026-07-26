@@ -6,7 +6,7 @@
 
 [![Star on GitHub](https://img.shields.io/github/stars/rafacv23/F1-api?style=social)](https://github.com/rafacv23/F1-api) [![Fork on GitHub](https://img.shields.io/github/forks/rafacv23/F1-api?style=social)](https://github.com/rafacv23/F1-api/fork)
 
-Project made with Express and Turso to take all the data about the Formula 1 Championship.
+Project made with Express and Postgres to take all the data about the Formula 1 Championship.
 
 [f1api.dev](https://f1api.dev) | [Discord server](https://discord.gg/WHG9THxjqM)
 
@@ -55,18 +55,23 @@ const drivers = await f1Api.getDrivers()
 ## ⌨️ Stack
 
 - Express
-- Turso
+- Postgres
 - Drizzle ORM
 - TypeScript
 - Playwright
 
 ## 🚀 Running locally
 
+Requires a local Postgres instance and a database created for the project (e.g. `createdb f1stats`).
+
 ```bash
 npm install
-cp .env.example .env # fill in your Turso/Upstash credentials
+cp .env.example .env # fill in your DATABASE_URL and (optionally) Upstash credentials
+psql "$DATABASE_URL" -f db/migrations/0000_init.sql # create the schema
 npm run dev # starts the API with tsx watch on http://localhost:3000
 ```
+
+The database starts empty — populate it with `npm run scrap` and `npm run insert` (see `lib/scrap` and `lib/insert`), then `npm run insert:circuit-svgs` to backfill the curated circuit track outlines.
 
 Other scripts:
 

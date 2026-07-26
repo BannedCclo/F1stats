@@ -1,9 +1,9 @@
 import { Link, useParams } from 'react-router-dom'
-import { useTeam, useTeamDriversByYear } from '@/api/queries'
+import { useTeam, useTeamClassifications } from '@/api/queries'
 import { useI18n } from '@/i18n/useI18n'
 import { unwrapOne, normalizeTeam } from '@/domain/normalize'
 import { teamColor } from '@/domain/teamColors'
-import DriverMonogram from '@/components/identity/DriverMonogram'
+import { formatPoints, formatPosition } from '@/domain/format'
 import CountryFlag from '@/components/identity/CountryFlag'
 import QueryStatus from '@/components/ui/QueryStatus'
 import KerbDivider from '@/components/ui/KerbDivider'
@@ -14,11 +14,12 @@ export default function TeamDetail() {
   const { t } = useI18n()
 
   const bioQuery = useTeam(teamId)
-  const driversQuery = useTeamDriversByYear('current', teamId)
+  const classificationsQuery = useTeamClassifications(teamId)
 
   const rawTeam = unwrapOne(bioQuery.data?.team)
   const team = rawTeam ? normalizeTeam(rawTeam, teamId) : null
-  const drivers = driversQuery.data?.drivers ?? []
+  const classifications = classificationsQuery.data?.classifications ?? []
+  const hasClassifications = !classificationsQuery.isError && classifications.length > 0
   const color = teamColor(teamId)
 
   return (
@@ -61,39 +62,66 @@ export default function TeamDetail() {
       <KerbDivider className="my-8" />
 
       <h2 className="font-display text-xl font-bold uppercase tracking-tight text-chalk">
-        {t('team.currentDrivers')}
+        {t('team.resultsBySeason')}
       </h2>
 
-      <QueryStatus
-        isLoading={driversQuery.isLoading}
-        error={driversQuery.error}
-        isEmpty={drivers.length === 0}
-        skeletonRows={2}
-      >
-        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {drivers.map(({ driver }) => (
-            <li key={driver.driverId}>
-              <Link
-                to={`/drivers/${driver.driverId}`}
-                className="flex items-center gap-3 border border-graphite bg-carbon p-3 transition-colors hover:border-kerb"
-              >
-                <DriverMonogram
-                  shortName={driver.shortName}
-                  surname={driver.surname}
-                  teamId={teamId}
-                  wikipediaUrl={driver.url}
-                />
-                <span className="text-sm text-chalk">
-                  {driver.name} {driver.surname}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </QueryStatus>
+      {classificationsQuery.isLoading && <p className="mt-4 font-data text-sm text-smoke">{t('status.loading')}</p>}
+
+      {hasClassifications && (
+        <div className="mt-4 overflow-x-auto border border-graphite">
+          <table className="w-full min-w-[560px] border-collapse font-data text-sm">
+            <thead>
+              <tr className="border-b border-graphite text-left text-xs uppercase tracking-wide text-smoke">
+                <th className="px-3 py-2">{t('table.season')}</th>
+                <th className="px-3 py-2 text-right">{t('table.position')}</th>
+                <th className="px-3 py-2 text-right">{t('table.points')}</th>
+                <th className="px-3 py-2 text-right">{t('table.wins')}</th>
+                <th className="px-3 py-2 text-right">{t('team.racesEntered')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...classifications]
+                .reverse()
+                .map((entry) => (
+                  <tr key={entry.championshipId} className="border-b border-graphite/60">
+                    <td className="px-3 py-2 text-chalk">
+                      {entry.season ? (
+                        <Link
+                          to={`/standings/constructors/${entry.season}`}
+                          className="hover:text-kerb"
+                        >
+                          {entry.season}
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right font-tabular text-chalk">
+                      {entry.position !== null ? formatPosition(entry.position) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right font-tabular text-chalk">
+                      {entry.points !== null ? formatPoints(entry.points) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right font-tabular text-smoke">{entry.wins}</td>
+                    <td className="px-3 py-2 text-right font-tabular text-smoke">{entry.racesEntered}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!classificationsQuery.isLoading && !hasClassifications && (
+        <p className="mt-4 font-data text-sm text-smoke">{t('status.empty')}</p>
+      )}
 
       {team?.url && (
-        <a href={team.url} target="_blank" rel="noreferrer" className="mt-8 inline-block font-data text-xs text-smoke hover:text-kerb">
+        <a
+          href={team.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-8 inline-block font-data text-xs text-smoke hover:text-kerb"
+        >
           Wikipedia ↗
         </a>
       )}

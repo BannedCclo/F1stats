@@ -46,6 +46,7 @@ export interface Dictionary {
     q2: string
     q3: string
     retired: string
+    season: string
   }
   driver: {
     nationality: string
@@ -79,7 +80,8 @@ export interface Dictionary {
     firstAppearance: string
     constructorsChampionships: string
     driversChampionships: string
-    currentDrivers: string
+    resultsBySeason: string
+    racesEntered: string
   }
   circuit: {
     country: string
@@ -97,6 +99,7 @@ export interface Dictionary {
     round: string
     winner: string
     races: string
+    jumpToSeason: string
   }
   search: {
     placeholder: string
@@ -170,6 +173,7 @@ const en: Dictionary = {
     q2: 'Q2',
     q3: 'Q3',
     retired: 'Retired',
+    season: 'Season',
   },
   driver: {
     nationality: 'Nationality',
@@ -203,7 +207,8 @@ const en: Dictionary = {
     firstAppearance: 'First appearance',
     constructorsChampionships: "Constructors' titles",
     driversChampionships: "Drivers' titles",
-    currentDrivers: 'Current drivers',
+    resultsBySeason: 'Results by season',
+    racesEntered: 'Races entered',
   },
   circuit: {
     country: 'Country',
@@ -221,6 +226,7 @@ const en: Dictionary = {
     round: 'Round',
     winner: 'Winner',
     races: 'races',
+    jumpToSeason: 'Jump to season',
   },
   search: {
     placeholder: 'Search drivers, teams, circuits…',

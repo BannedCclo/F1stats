@@ -1,7 +1,13 @@
 import "dotenv/config"
 import cors from "cors"
 import express from "express"
+import { types } from "pg"
 import { rateLimitMiddleware } from "./middleware/rateLimit"
+
+// pg parses bigint (COUNT/SUM results) as strings by default to avoid
+// precision loss on truly huge values. Our aggregates never get remotely
+// close to that range, so parse them as regular numbers instead.
+types.setTypeParser(20, (value) => parseInt(value, 10))
 import championshipsRouter from "./routes/championships"
 import circuitsRouter from "./routes/circuits"
 import compareRouter from "./routes/compare"

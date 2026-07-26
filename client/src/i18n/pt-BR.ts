@@ -51,6 +51,7 @@ const ptBR: Dictionary = {
     q2: 'Q2',
     q3: 'Q3',
     retired: 'Abandonou',
+    season: 'Temporada',
   },
   driver: {
     nationality: 'Nacionalidade',
@@ -84,7 +85,8 @@ const ptBR: Dictionary = {
     firstAppearance: 'Primeira aparição',
     constructorsChampionships: 'Títulos de construtores',
     driversChampionships: 'Títulos de pilotos',
-    currentDrivers: 'Pilotos atuais',
+    resultsBySeason: 'Resultados por temporada',
+    racesEntered: 'Corridas disputadas',
   },
   circuit: {
     country: 'País',
@@ -102,6 +104,7 @@ const ptBR: Dictionary = {
     round: 'Etapa',
     winner: 'Vencedor',
     races: 'corridas',
+    jumpToSeason: 'Ir para temporada',
   },
   search: {
     placeholder: 'Buscar pilotos, equipes, circuitos…',

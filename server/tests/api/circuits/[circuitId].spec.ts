@@ -25,13 +25,18 @@ test.describe("GET /api/circuits/[circuitId]", async () => {
         country: expect.any(String),
         city: expect.any(String),
         circuitLength: expect.any(Number),
-        numberOfCorners: expect.any(Number),
+        corners: expect.any(Number),
         firstParticipationYear: expect.any(Number),
         lapRecord: expect.any(String),
         fastestLapDriverId: expect.any(String),
         fastestLapTeamId: expect.any(String),
         fastestLapYear: expect.any(Number),
         url: expect.any(String),
+      })
+      // Monza is in the curated real-shape dataset, so this should be non-null.
+      expect(circuit.svg).toMatchObject({
+        path: expect.any(String),
+        viewBox: expect.any(String),
       })
     }
   })

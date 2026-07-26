@@ -1,46 +1,80 @@
 import { Router, type Request, type Response } from "express"
-import { eq, InferModel, like, or } from "drizzle-orm"
+import { eq, like, or } from "drizzle-orm"
 import { db } from "../../db"
 import { circuits, races } from "../../db/migrations/schema"
 import { SITE_NAME, SITE_URL } from "../lib/constants"
 import { BaseApiResponse } from "../lib/definitions"
-import { apiNotFound, getLimitAndOffset } from "../lib/utils"
+import { apiNotFound, circuitSvg, getLimitAndOffset } from "../lib/utils"
 
 const router = Router()
 
-type Circuit = InferModel<typeof circuits>
-
-interface CircuitsApiResponse extends BaseApiResponse {
-  circuits: Circuit[]
-}
-
-interface CircuitApiResponse extends BaseApiResponse {
-  circuit: Circuit[]
-}
-
-interface CircuitsSearchApiResponse extends BaseApiResponse {
-  circuits: Circuit[]
-  query: string
-}
-
-type YearCircuit = {
+interface CircuitLikeRow {
   circuitId: string | null
   circuitName: string | null
   country: string | null
   city: string | null
   circuitLength: number | null
+  numberOfCorners: number | null
   firstParticipationYear: number | null
-  corners?: number | null
   lapRecord: string | null
   fastestLapDriverId: string | null
   fastestLapTeamId: string | null
   fastestLapYear: number | null
   url: string | null
+  svgPath: string | null
+  svgViewBox: string | null
+}
+
+interface ProcessedCircuit {
+  circuitId: string | null
+  circuitName: string | null
+  country: string | null
+  city: string | null
+  circuitLength: number | null
+  corners: number | null
+  firstParticipationYear: number | null
+  lapRecord: string | null
+  fastestLapDriverId: string | null
+  fastestLapTeamId: string | null
+  fastestLapYear: number | null
+  url: string | null
+  svg: { path: string; viewBox: string } | null
+}
+
+function formatCircuit(circuit: CircuitLikeRow): ProcessedCircuit {
+  return {
+    circuitId: circuit.circuitId,
+    circuitName: circuit.circuitName,
+    country: circuit.country,
+    city: circuit.city,
+    circuitLength: circuit.circuitLength,
+    corners: circuit.numberOfCorners,
+    firstParticipationYear: circuit.firstParticipationYear,
+    lapRecord: circuit.lapRecord,
+    fastestLapDriverId: circuit.fastestLapDriverId,
+    fastestLapTeamId: circuit.fastestLapTeamId,
+    fastestLapYear: circuit.fastestLapYear,
+    url: circuit.url,
+    svg: circuitSvg(circuit),
+  }
+}
+
+interface CircuitsApiResponse extends BaseApiResponse {
+  circuits: ProcessedCircuit[]
+}
+
+interface CircuitApiResponse extends BaseApiResponse {
+  circuit: ProcessedCircuit[]
+}
+
+interface CircuitsSearchApiResponse extends BaseApiResponse {
+  circuits: ProcessedCircuit[]
+  query: string
 }
 
 interface YearCircuitsApiResponse extends BaseApiResponse {
   season: string | number
-  circuits: YearCircuit[]
+  circuits: ProcessedCircuit[]
 }
 
 // GET /circuits
@@ -60,30 +94,13 @@ router.get("/circuits", async (req: Request, res: Response) => {
       return apiNotFound(res, fullUrl, "No circuits found.")
     }
 
-    circuitsData.forEach((circuit) => {
-      return {
-        circuitId: circuit.circuitId,
-        circuitName: circuit.circuitName,
-        country: circuit.country,
-        city: circuit.city,
-        circuitLength: circuit.circuitLength,
-        corners: circuit.numberOfCorners,
-        firstParticipationYear: circuit.firstParticipationYear,
-        lapRecord: circuit.lapRecord,
-        fastestLapDriverId: circuit.fastestLapDriverId,
-        fastestLapTeamId: circuit.fastestLapTeamId,
-        fastestLapYear: circuit.fastestLapYear,
-        url: circuit.url,
-      }
-    })
-
     const response: CircuitsApiResponse = {
       api: SITE_URL,
       url: fullUrl,
       limit: limit,
       offset: offset,
       total: circuitsData.length,
-      circuits: circuitsData,
+      circuits: circuitsData.map(formatCircuit),
     }
 
     return res
@@ -122,23 +139,6 @@ router.get("/circuits/search", async (req: Request, res: Response) => {
       return apiNotFound(res, fullUrl, "No circuits found.")
     }
 
-    circuitsData.forEach((circuit) => {
-      return {
-        circuitId: circuit.circuitId,
-        circuitName: circuit.circuitName,
-        country: circuit.country,
-        city: circuit.city,
-        circuitLength: circuit.circuitLength,
-        corners: circuit.numberOfCorners,
-        firstParticipationYear: circuit.firstParticipationYear,
-        lapRecord: circuit.lapRecord,
-        fastestLapDriverId: circuit.fastestLapDriverId,
-        fastestLapTeamId: circuit.fastestLapTeamId,
-        fastestLapYear: circuit.fastestLapYear,
-        url: circuit.url,
-      }
-    })
-
     const response: CircuitsSearchApiResponse = {
       api: SITE_URL,
       url: fullUrl,
@@ -146,7 +146,7 @@ router.get("/circuits/search", async (req: Request, res: Response) => {
       offset: offset,
       query: searchParams.get("q") ?? "",
       total: circuitsData.length,
-      circuits: circuitsData,
+      circuits: circuitsData.map(formatCircuit),
     }
 
     return res
@@ -182,28 +182,11 @@ router.get("/circuits/:circuitId", async (req: Request, res: Response) => {
       )
     }
 
-    circuitData.forEach((circuit) => {
-      return {
-        circuitId: circuit.circuitId,
-        circuitName: circuit.circuitName,
-        country: circuit.country,
-        city: circuit.city,
-        circuitLength: circuit.circuitLength,
-        corners: circuit.numberOfCorners,
-        firstParticipationYear: circuit.firstParticipationYear,
-        lapRecord: circuit.lapRecord,
-        fastestLapDriverId: circuit.fastestLapDriverId,
-        fastestLapTeamId: circuit.fastestLapTeamId,
-        fastestLapYear: circuit.fastestLapYear,
-        url: circuit.url,
-      }
-    })
-
     const response: CircuitApiResponse = {
       api: SITE_URL,
       url: fullUrl,
       total: circuitData.length,
-      circuit: circuitData,
+      circuit: circuitData.map(formatCircuit),
     }
 
     return res
@@ -240,6 +223,8 @@ router.get("/:year/circuits", async (req: Request, res: Response) => {
         fastestLapTeamId: circuits.fastestLapTeamId,
         fastestLapYear: circuits.fastestLapYear,
         url: circuits.url,
+        svgPath: circuits.svgPath,
+        svgViewBox: circuits.svgViewBox,
       })
       .from(circuits)
       .innerJoin(races, eq(circuits.circuitId, races.circuit))
@@ -255,23 +240,6 @@ router.get("/:year/circuits", async (req: Request, res: Response) => {
       )
     }
 
-    circuitsData.forEach((circuit) => {
-      return {
-        circuitId: circuit.circuitId,
-        circuitName: circuit.circuitName,
-        country: circuit.country,
-        city: circuit.city,
-        circuitLength: circuit.circuitLength,
-        lapRecord: circuit.lapRecord,
-        firstParticipationYear: circuit.firstParticipationYear,
-        corners: circuit.numberOfCorners,
-        fastestLapDriverId: circuit.fastestLapDriverId,
-        fastestLapTeamId: circuit.fastestLapTeamId,
-        fastestLapYear: circuit.fastestLapYear,
-        url: circuit.url,
-      }
-    })
-
     const response: YearCircuitsApiResponse = {
       api: SITE_NAME,
       url: fullUrl,
@@ -279,7 +247,7 @@ router.get("/:year/circuits", async (req: Request, res: Response) => {
       offset: offset,
       total: circuitsData.length,
       season: parseInt(year),
-      circuits: circuitsData,
+      circuits: circuitsData.map(formatCircuit),
     }
 
     return res

@@ -1,5 +1,5 @@
 // scrap the drivers championship and update the database with the new data (points, wins, etc)
-import { clientWriter } from "../../turso.js"
+import { clientWriter } from "../../db.js"
 import { formatDriver, formatTeam } from "../utils.js"
 
 /*

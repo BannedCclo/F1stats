@@ -1,5 +1,5 @@
 // Insert race results to the database
-import { clientWriter } from "../turso.js"
+import { clientWriter } from "../db.js"
 import { generateRaceId } from "./utils.js"
 
 export const insertQualy = async (races) => {

@@ -1,4 +1,4 @@
-import { clientWriter } from "../turso.js"
+import { clientWriter } from "../db.js"
 import { generateId, generateName } from "./utils.js"
 
 export const insertSeasons = async (data) => {

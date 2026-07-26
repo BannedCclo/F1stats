@@ -1,4 +1,4 @@
-import { clientWriter } from "../turso.js"
+import { clientWriter } from "../db.js"
 
 export const insertTeams = async (teams) => {
   try {

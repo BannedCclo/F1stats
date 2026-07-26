@@ -37,18 +37,17 @@ export const endpoints = {
   drivers: (limit?: number, offset?: number) => `/drivers${qs({ limit, offset })}`,
   driverSearch: (q: string) => `/drivers/search${qs({ q })}`,
   driver: (driverId: string) => `/drivers/${driverId}`,
+  driverClassifications: (driverId: string) => `/drivers/${driverId}/classifications`,
   driversByYear: (year: number | 'current', limit?: number, offset?: number) =>
     `/${year}/drivers${qs({ limit, offset })}`,
-  driverByYear: (year: number | 'current', driverId: string) => `/${year}/drivers/${driverId}`,
 
   teams: (limit?: number, offset?: number) => `/teams${qs({ limit, offset })}`,
   teamSearch: (q: string) => `/teams/search${qs({ q })}`,
   team: (teamId: string) => `/teams/${teamId}`,
+  teamClassifications: (teamId: string) => `/teams/${teamId}/classifications`,
   teamsByYear: (year: number | 'current', limit?: number, offset?: number) =>
     `/${year}/teams${qs({ limit, offset })}`,
   teamByYear: (year: number | 'current', teamId: string) => `/${year}/teams/${teamId}`,
-  teamDriversByYear: (year: number | 'current', teamId: string) =>
-    `/${year}/teams/${teamId}/drivers`,
 
   circuits: (limit?: number, offset?: number) => `/circuits${qs({ limit, offset })}`,
   circuitSearch: (q: string) => `/circuits/search${qs({ q })}`,

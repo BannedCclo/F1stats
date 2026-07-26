@@ -52,13 +52,8 @@ lerna-debug.log*
 # vercel
 .vercel
 
-# local sqlite dbs
-server/db/*.sqlite
-server/db/*.db
-server/db/temp/
-server/db/cache/
-!server/db/migrations/
-!server/db/schema.ts
+# f1api.dev population script checkpoint
+server/lib/populate/.progress.json
 
 .github/copilot-instructions.md
 

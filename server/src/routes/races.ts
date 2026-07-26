@@ -19,13 +19,58 @@ import { CURRENT_YEAR, SITE_URL } from "../lib/constants"
 import { BaseApiResponse } from "../lib/definitions"
 import {
   apiNotFound,
+  circuitSvg,
   convertToTimezone,
   getDay,
   getLimitAndOffset,
   getYear,
 } from "../lib/utils"
+import {
+  getChampionshipDriverIds,
+  getChampionshipTeamIds,
+  getRaceDriverIds,
+  getRaceTeamIds,
+} from "../lib/participants"
 
 const router = Router()
+
+type ChampionshipRow = InferModel<typeof championships>
+
+/**
+ * Enriches a championship and its races with the driverIds/teamIds that
+ * actually participated, derived from race results and championship
+ * classifications rather than stored redundantly.
+ */
+async function withParticipants<T extends { raceId: string | null }>(
+  championship: ChampionshipRow,
+  formattedRaces: T[]
+) {
+  const raceIds = formattedRaces
+    .map((race) => race.raceId)
+    .filter((id): id is string => id !== null)
+
+  const [raceDriverIds, raceTeamIds, championshipDriverIds, championshipTeamIds] =
+    await Promise.all([
+      getRaceDriverIds(raceIds),
+      getRaceTeamIds(raceIds),
+      getChampionshipDriverIds([championship.championshipId]),
+      getChampionshipTeamIds([championship.championshipId]),
+    ])
+
+  const races = formattedRaces.map((race) => ({
+    ...race,
+    driverIds: race.raceId ? raceDriverIds.get(race.raceId) ?? [] : [],
+    teamIds: race.raceId ? raceTeamIds.get(race.raceId) ?? [] : [],
+  }))
+
+  const championshipWithParticipants = {
+    ...championship,
+    driverIds: championshipDriverIds.get(championship.championshipId) ?? [],
+    teamIds: championshipTeamIds.get(championship.championshipId) ?? [],
+  }
+
+  return { championship: championshipWithParticipants, races }
+}
 
 interface SeasonApiResponse extends BaseApiResponse {
   season: number | string
@@ -108,92 +153,96 @@ router.get("/current", async (req: Request, res: Response) => {
     }
 
     const formattedData = seasonData.map((race) => ({
-      raceId: race.Races.raceId,
-      championshipId: race.Races.championshipId,
-      raceName: race.Races.raceName,
+      raceId: race.races.raceId,
+      championshipId: race.races.championshipId,
+      raceName: race.races.raceName,
       schedule: {
         race: convertToTimezone(
-          race.Races.raceDate,
-          race.Races.raceTime,
+          race.races.raceDate,
+          race.races.raceTime,
           timezone
         ),
         qualy: convertToTimezone(
-          race.Races.qualyDate,
-          race.Races.qualyTime,
+          race.races.qualyDate,
+          race.races.qualyTime,
           timezone
         ),
         fp1: convertToTimezone(
-          race.Races.fp1Date,
-          race.Races.fp1Time,
+          race.races.fp1Date,
+          race.races.fp1Time,
           timezone
         ),
         fp2: convertToTimezone(
-          race.Races.fp2Date,
-          race.Races.fp2Time,
+          race.races.fp2Date,
+          race.races.fp2Time,
           timezone
         ),
         fp3: convertToTimezone(
-          race.Races.fp3Date,
-          race.Races.fp3Time,
+          race.races.fp3Date,
+          race.races.fp3Time,
           timezone
         ),
         sprintQualy: convertToTimezone(
-          race.Races.sprintQualyDate,
-          race.Races.sprintQualyTime,
+          race.races.sprintQualyDate,
+          race.races.sprintQualyTime,
           timezone
         ),
         sprintRace: convertToTimezone(
-          race.Races.sprintRaceDate,
-          race.Races.sprintRaceTime,
+          race.races.sprintRaceDate,
+          race.races.sprintRaceTime,
           timezone
         ),
       },
-      laps: race.Races.laps,
-      round: race.Races.round,
-      url: race.Races.url,
+      laps: race.races.laps,
+      round: race.races.round,
+      url: race.races.url,
       fast_lap: {
-        fast_lap: race.Races.fastLap,
-        fast_lap_driver_id: race.Races.fastLapDriverId,
-        fast_lap_team_id: race.Races.fastLapTeamId,
+        fast_lap: race.races.fastLap,
+        fast_lap_driver_id: race.races.fastLapDriverId,
+        fast_lap_team_id: race.races.fastLapTeamId,
       },
       circuit: {
-        circuitId: race.Circuits.circuitId,
-        circuitName: race.Circuits.circuitName,
-        country: race.Circuits.country,
-        city: race.Circuits.city,
-        circuitLength: race.Circuits.circuitLength + "km",
-        lapRecord: race.Circuits.lapRecord,
-        firstParticipationYear: race.Circuits.firstParticipationYear,
-        corners: race.Circuits.numberOfCorners,
-        fastestLapDriverId: race.Circuits.fastestLapDriverId,
-        fastestLapTeamId: race.Circuits.fastestLapTeamId,
-        fastestLapYear: race.Circuits.fastestLapYear,
-        url: race.Circuits.url,
+        circuitId: race.circuits.circuitId,
+        circuitName: race.circuits.circuitName,
+        country: race.circuits.country,
+        city: race.circuits.city,
+        circuitLength: race.circuits.circuitLength + "km",
+        lapRecord: race.circuits.lapRecord,
+        firstParticipationYear: race.circuits.firstParticipationYear,
+        corners: race.circuits.numberOfCorners,
+        fastestLapDriverId: race.circuits.fastestLapDriverId,
+        fastestLapTeamId: race.circuits.fastestLapTeamId,
+        fastestLapYear: race.circuits.fastestLapYear,
+        url: race.circuits.url,
+        svg: circuitSvg(race.circuits),
       },
-      winner: race.Drivers?.driverId
+      winner: race.drivers?.driverId
         ? {
-            driverId: race.Drivers.driverId,
-            name: race.Drivers.name,
-            surname: race.Drivers.surname,
-            country: race.Drivers.nationality,
-            birthday: race.Drivers.birthday,
-            number: race.Drivers.number,
-            shortName: race.Drivers.shortName,
-            url: race.Drivers.url,
+            driverId: race.drivers.driverId,
+            name: race.drivers.name,
+            surname: race.drivers.surname,
+            country: race.drivers.nationality,
+            birthday: race.drivers.birthday,
+            number: race.drivers.number,
+            shortName: race.drivers.shortName,
+            url: race.drivers.url,
           }
         : null,
-      teamWinner: race.Teams?.teamId
+      teamWinner: race.teams?.teamId
         ? {
-            teamId: race.Teams.teamId,
-            teamName: race.Teams.teamName,
-            country: race.Teams.teamNationality,
-            firstAppearance: race.Teams.firstAppeareance,
-            constructorsChampionships: race.Teams.constructorsChampionships,
-            driversChampionships: race.Teams.driversChampionships,
-            url: race.Teams.url,
+            teamId: race.teams.teamId,
+            teamName: race.teams.teamName,
+            country: race.teams.teamNationality,
+            firstAppearance: race.teams.firstAppeareance,
+            constructorsChampionships: race.teams.constructorsChampionships,
+            driversChampionships: race.teams.driversChampionships,
+            url: race.teams.url,
           }
         : null,
     }))
+
+    const { championship: championshipWithParticipants, races: racesWithParticipants } =
+      await withParticipants(championship, formattedData)
 
     const response: SeasonApiResponse = {
       api: SITE_URL,
@@ -203,8 +252,8 @@ router.get("/current", async (req: Request, res: Response) => {
       timezone: timezone || undefined,
       total: formattedData.length,
       season: year,
-      championship: championship,
-      races: formattedData,
+      championship: championshipWithParticipants,
+      races: racesWithParticipants,
     }
 
     return res
@@ -269,92 +318,96 @@ router.get("/current/next", async (req: Request, res: Response) => {
     }
 
     const formattedData = seasonData.map((race) => ({
-      raceId: race.Races.raceId,
-      championshipId: race.Races.championshipId,
-      raceName: race.Races.raceName,
+      raceId: race.races.raceId,
+      championshipId: race.races.championshipId,
+      raceName: race.races.raceName,
       schedule: {
         race: convertToTimezone(
-          race.Races.raceDate,
-          race.Races.raceTime,
+          race.races.raceDate,
+          race.races.raceTime,
           timezone
         ),
         qualy: convertToTimezone(
-          race.Races.qualyDate,
-          race.Races.qualyTime,
+          race.races.qualyDate,
+          race.races.qualyTime,
           timezone
         ),
         fp1: convertToTimezone(
-          race.Races.fp1Date,
-          race.Races.fp1Time,
+          race.races.fp1Date,
+          race.races.fp1Time,
           timezone
         ),
         fp2: convertToTimezone(
-          race.Races.fp2Date,
-          race.Races.fp2Time,
+          race.races.fp2Date,
+          race.races.fp2Time,
           timezone
         ),
         fp3: convertToTimezone(
-          race.Races.fp3Date,
-          race.Races.fp3Time,
+          race.races.fp3Date,
+          race.races.fp3Time,
           timezone
         ),
         sprintQualy: convertToTimezone(
-          race.Races.sprintQualyDate,
-          race.Races.sprintQualyTime,
+          race.races.sprintQualyDate,
+          race.races.sprintQualyTime,
           timezone
         ),
         sprintRace: convertToTimezone(
-          race.Races.sprintRaceDate,
-          race.Races.sprintRaceTime,
+          race.races.sprintRaceDate,
+          race.races.sprintRaceTime,
           timezone
         ),
       },
-      laps: race.Races.laps,
-      round: race.Races.round,
-      url: race.Races.url,
+      laps: race.races.laps,
+      round: race.races.round,
+      url: race.races.url,
       fast_lap: {
-        fast_lap: race.Races.fastLap,
-        fast_lap_driver_id: race.Races.fastLapDriverId,
-        fast_lap_team_id: race.Races.fastLapTeamId,
+        fast_lap: race.races.fastLap,
+        fast_lap_driver_id: race.races.fastLapDriverId,
+        fast_lap_team_id: race.races.fastLapTeamId,
       },
       circuit: {
-        circuitId: race.Circuits.circuitId,
-        circuitName: race.Circuits.circuitName,
-        country: race.Circuits.country,
-        city: race.Circuits.city,
-        circuitLength: race.Circuits.circuitLength + "km",
-        lapRecord: race.Circuits.lapRecord,
-        firstParticipationYear: race.Circuits.firstParticipationYear,
-        corners: race.Circuits.numberOfCorners,
-        fastestLapDriverId: race.Circuits.fastestLapDriverId,
-        fastestLapTeamId: race.Circuits.fastestLapTeamId,
-        fastestLapYear: race.Circuits.fastestLapYear,
-        url: race.Circuits.url,
+        circuitId: race.circuits.circuitId,
+        circuitName: race.circuits.circuitName,
+        country: race.circuits.country,
+        city: race.circuits.city,
+        circuitLength: race.circuits.circuitLength + "km",
+        lapRecord: race.circuits.lapRecord,
+        firstParticipationYear: race.circuits.firstParticipationYear,
+        corners: race.circuits.numberOfCorners,
+        fastestLapDriverId: race.circuits.fastestLapDriverId,
+        fastestLapTeamId: race.circuits.fastestLapTeamId,
+        fastestLapYear: race.circuits.fastestLapYear,
+        url: race.circuits.url,
+        svg: circuitSvg(race.circuits),
       },
-      winner: race.Drivers?.driverId
+      winner: race.drivers?.driverId
         ? {
-            driverId: race.Drivers.driverId,
-            name: race.Drivers.name,
-            surname: race.Drivers.surname,
-            country: race.Drivers.nationality,
-            birthday: race.Drivers.birthday,
-            number: race.Drivers.number,
-            shortName: race.Drivers.shortName,
-            url: race.Drivers.url,
+            driverId: race.drivers.driverId,
+            name: race.drivers.name,
+            surname: race.drivers.surname,
+            country: race.drivers.nationality,
+            birthday: race.drivers.birthday,
+            number: race.drivers.number,
+            shortName: race.drivers.shortName,
+            url: race.drivers.url,
           }
         : null,
-      teamWinner: race.Teams?.teamId
+      teamWinner: race.teams?.teamId
         ? {
-            teamId: race.Teams.teamId,
-            teamName: race.Teams.teamName,
-            country: race.Teams.teamNationality,
-            firstAppearance: race.Teams.firstAppeareance,
-            constructorsChampionships: race.Teams.constructorsChampionships,
-            driversChampionships: race.Teams.driversChampionships,
-            url: race.Teams.url,
+            teamId: race.teams.teamId,
+            teamName: race.teams.teamName,
+            country: race.teams.teamNationality,
+            firstAppearance: race.teams.firstAppeareance,
+            constructorsChampionships: race.teams.constructorsChampionships,
+            driversChampionships: race.teams.driversChampionships,
+            url: race.teams.url,
           }
         : null,
     }))
+
+    const { championship: championshipWithParticipants, races: racesWithParticipants } =
+      await withParticipants(championship, formattedData)
 
     const response: NextApiResponse = {
       api: SITE_URL,
@@ -363,8 +416,8 @@ router.get("/current/next", async (req: Request, res: Response) => {
       total: formattedData.length,
       season: year,
       round: formattedData[0].round,
-      championship: championship,
-      race: formattedData,
+      championship: championshipWithParticipants,
+      race: racesWithParticipants,
     }
 
     return res
@@ -430,92 +483,96 @@ router.get("/current/last", async (req: Request, res: Response) => {
     }
 
     const formattedData = seasonData.map((race) => ({
-      raceId: race.Races.raceId,
-      championshipId: race.Races.championshipId,
-      raceName: race.Races.raceName,
+      raceId: race.races.raceId,
+      championshipId: race.races.championshipId,
+      raceName: race.races.raceName,
       schedule: {
         race: convertToTimezone(
-          race.Races.raceDate,
-          race.Races.raceTime,
+          race.races.raceDate,
+          race.races.raceTime,
           timezone
         ),
         qualy: convertToTimezone(
-          race.Races.qualyDate,
-          race.Races.qualyTime,
+          race.races.qualyDate,
+          race.races.qualyTime,
           timezone
         ),
         fp1: convertToTimezone(
-          race.Races.fp1Date,
-          race.Races.fp1Time,
+          race.races.fp1Date,
+          race.races.fp1Time,
           timezone
         ),
         fp2: convertToTimezone(
-          race.Races.fp2Date,
-          race.Races.fp2Time,
+          race.races.fp2Date,
+          race.races.fp2Time,
           timezone
         ),
         fp3: convertToTimezone(
-          race.Races.fp3Date,
-          race.Races.fp3Time,
+          race.races.fp3Date,
+          race.races.fp3Time,
           timezone
         ),
         sprintQualy: convertToTimezone(
-          race.Races.sprintQualyDate,
-          race.Races.sprintQualyTime,
+          race.races.sprintQualyDate,
+          race.races.sprintQualyTime,
           timezone
         ),
         sprintRace: convertToTimezone(
-          race.Races.sprintRaceDate,
-          race.Races.sprintRaceTime,
+          race.races.sprintRaceDate,
+          race.races.sprintRaceTime,
           timezone
         ),
       },
-      laps: race.Races.laps,
-      round: race.Races.round,
-      url: race.Races.url,
+      laps: race.races.laps,
+      round: race.races.round,
+      url: race.races.url,
       fast_lap: {
-        fast_lap: race.Races.fastLap,
-        fast_lap_driver_id: race.Races.fastLapDriverId,
-        fast_lap_team_id: race.Races.fastLapTeamId,
+        fast_lap: race.races.fastLap,
+        fast_lap_driver_id: race.races.fastLapDriverId,
+        fast_lap_team_id: race.races.fastLapTeamId,
       },
       circuit: {
-        circuitId: race.Circuits.circuitId,
-        circuitName: race.Circuits.circuitName,
-        country: race.Circuits.country,
-        city: race.Circuits.city,
-        circuitLength: race.Circuits.circuitLength + "km",
-        lapRecord: race.Circuits.lapRecord,
-        firstParticipationYear: race.Circuits.firstParticipationYear,
-        corners: race.Circuits.numberOfCorners,
-        fastestLapDriverId: race.Circuits.fastestLapDriverId,
-        fastestLapTeamId: race.Circuits.fastestLapTeamId,
-        fastestLapYear: race.Circuits.fastestLapYear,
-        url: race.Circuits.url,
+        circuitId: race.circuits.circuitId,
+        circuitName: race.circuits.circuitName,
+        country: race.circuits.country,
+        city: race.circuits.city,
+        circuitLength: race.circuits.circuitLength + "km",
+        lapRecord: race.circuits.lapRecord,
+        firstParticipationYear: race.circuits.firstParticipationYear,
+        corners: race.circuits.numberOfCorners,
+        fastestLapDriverId: race.circuits.fastestLapDriverId,
+        fastestLapTeamId: race.circuits.fastestLapTeamId,
+        fastestLapYear: race.circuits.fastestLapYear,
+        url: race.circuits.url,
+        svg: circuitSvg(race.circuits),
       },
-      winner: race.Drivers?.driverId
+      winner: race.drivers?.driverId
         ? {
-            driverId: race.Drivers.driverId,
-            name: race.Drivers.name,
-            surname: race.Drivers.surname,
-            country: race.Drivers.nationality,
-            birthday: race.Drivers.birthday,
-            number: race.Drivers.number,
-            shortName: race.Drivers.shortName,
-            url: race.Drivers.url,
+            driverId: race.drivers.driverId,
+            name: race.drivers.name,
+            surname: race.drivers.surname,
+            country: race.drivers.nationality,
+            birthday: race.drivers.birthday,
+            number: race.drivers.number,
+            shortName: race.drivers.shortName,
+            url: race.drivers.url,
           }
         : null,
-      teamWinner: race.Teams?.teamId
+      teamWinner: race.teams?.teamId
         ? {
-            teamId: race.Teams.teamId,
-            teamName: race.Teams.teamName,
-            country: race.Teams.teamNationality,
-            firstAppearance: race.Teams.firstAppeareance,
-            constructorsChampionships: race.Teams.constructorsChampionships,
-            driversChampionships: race.Teams.driversChampionships,
-            url: race.Teams.url,
+            teamId: race.teams.teamId,
+            teamName: race.teams.teamName,
+            country: race.teams.teamNationality,
+            firstAppearance: race.teams.firstAppeareance,
+            constructorsChampionships: race.teams.constructorsChampionships,
+            driversChampionships: race.teams.driversChampionships,
+            url: race.teams.url,
           }
         : null,
     }))
+
+    const { championship: championshipWithParticipants, races: racesWithParticipants } =
+      await withParticipants(championship, formattedData)
 
     const response: LastApiResponse = {
       api: SITE_URL,
@@ -524,8 +581,8 @@ router.get("/current/last", async (req: Request, res: Response) => {
       total: formattedData.length,
       season: year,
       round: formattedData[0].round,
-      championship: championship,
-      race: formattedData,
+      championship: championshipWithParticipants,
+      race: racesWithParticipants,
     }
 
     return res
@@ -580,7 +637,7 @@ router.get("/current/last/race", async (req: Request, res: Response) => {
       .from(results)
       .innerJoin(drivers, eq(results.driverId, drivers.driverId))
       .innerJoin(teams, eq(results.teamId, teams.teamId))
-      .where(eq(results.raceId, race.Races.raceId))
+      .where(eq(results.raceId, race.races.raceId))
       .orderBy(results.finishingPosition)
       .limit(limit || 20)
       .offset(offset)
@@ -594,56 +651,57 @@ router.get("/current/last/race", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.raceDate,
-      race.Races.raceTime,
+      race.races.raceDate,
+      race.races.raceTime,
       timezone
     )
 
     const processedData = resultsData.map((result) => ({
-      position: String(result.Results.finishingPosition),
-      points: result.Results.pointsObtained,
-      grid: String(result.Results.gridPosition),
-      time: result.Results.raceTime,
-      fastLap: result.Results.fastLap,
-      retired: result.Results.retired,
+      position: String(result.results.finishingPosition),
+      points: result.results.pointsObtained,
+      grid: String(result.results.gridPosition),
+      time: result.results.raceTime,
+      fastLap: result.results.fastLap,
+      retired: result.results.retired,
       driver: {
-        driverId: result.Results.driverId,
-        number: result.Drivers.number,
-        shortName: result.Drivers.shortName,
-        url: result.Drivers.url,
-        name: result.Drivers.name,
-        surname: result.Drivers.surname,
-        nationality: result.Drivers.nationality,
-        birthday: result.Drivers.birthday,
+        driverId: result.results.driverId,
+        number: result.drivers.number,
+        shortName: result.drivers.shortName,
+        url: result.drivers.url,
+        name: result.drivers.name,
+        surname: result.drivers.surname,
+        nationality: result.drivers.nationality,
+        birthday: result.drivers.birthday,
       },
       team: {
-        teamId: result.Results.teamId,
-        teamName: result.Teams.teamName,
-        nationality: result.Teams.teamNationality,
-        firstAppareance: result.Teams.firstAppeareance,
-        constructorsChampionships: result.Teams.constructorsChampionships,
-        driversChampionships: result.Teams.driversChampionships,
-        url: result.Teams.url,
+        teamId: result.results.teamId,
+        teamName: result.teams.teamName,
+        nationality: result.teams.teamNationality,
+        firstAppareance: result.teams.firstAppeareance,
+        constructorsChampionships: result.teams.constructorsChampionships,
+        driversChampionships: result.teams.driversChampionships,
+        url: result.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      corners: race.Circuits.numberOfCorners,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      lapRecord: race.Circuits.lapRecord,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      corners: race.circuits.numberOfCorners,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      lapRecord: race.circuits.lapRecord,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -655,12 +713,12 @@ router.get("/current/last/race", async (req: Request, res: Response) => {
       total: resultsData.length,
       season: year,
       races: {
-        round: race.Races.round,
+        round: race.races.round,
         date: localDate,
         time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         results: processedData,
       },
@@ -718,7 +776,7 @@ router.get("/current/last/qualy", async (req: Request, res: Response) => {
       .from(classifications)
       .innerJoin(drivers, eq(classifications.driverId, drivers.driverId))
       .innerJoin(teams, eq(classifications.teamId, teams.teamId))
-      .where(eq(classifications.raceId, race.Races.raceId))
+      .where(eq(classifications.raceId, race.races.raceId))
       .limit(limit || 20)
       .offset(offset)
       .orderBy(asc(classifications.gridPosition))
@@ -732,57 +790,58 @@ router.get("/current/last/qualy", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.qualyDate,
-      race.Races.qualyTime,
+      race.races.qualyDate,
+      race.races.qualyTime,
       timezone
     )
 
     const processedData = qualyData.map((row) => ({
-      classificationId: row.Classifications.classificationId,
-      driverId: row.Classifications.driverId,
-      teamId: row.Classifications.teamId,
-      q1: row.Classifications.q1,
-      q2: row.Classifications.q2,
-      q3: row.Classifications.q3,
-      gridPosition: row.Classifications.gridPosition,
+      classificationId: row.classifications.classificationId,
+      driverId: row.classifications.driverId,
+      teamId: row.classifications.teamId,
+      q1: row.classifications.q1,
+      q2: row.classifications.q2,
+      q3: row.classifications.q3,
+      gridPosition: row.classifications.gridPosition,
       driver: {
-        driverId: row.Drivers.driverId,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        url: row.Drivers.url,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        birthday: row.Drivers.birthday,
+        driverId: row.drivers.driverId,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        url: row.drivers.url,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        birthday: row.drivers.birthday,
       },
       team: {
-        teamId: row.Teams.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.teams.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      corners: race.Circuits.numberOfCorners,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      lapRecord: race.Circuits.lapRecord,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      corners: race.circuits.numberOfCorners,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      lapRecord: race.circuits.lapRecord,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -794,12 +853,12 @@ router.get("/current/last/qualy", async (req: Request, res: Response) => {
       total: qualyData.length,
       season: year,
       races: {
-        round: race.Races.round,
+        round: race.races.round,
         qualyTime: localTime,
         qualyDate: localDate,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         qualyResults: processedData,
       },
@@ -852,7 +911,7 @@ router.get("/current/last/fp1", async (req: Request, res: Response) => {
       .from(fp1)
       .innerJoin(drivers, eq(fp1.driverId, drivers.driverId))
       .innerJoin(teams, eq(fp1.teamId, teams.teamId))
-      .where(eq(fp1.raceId, race.Races.raceId))
+      .where(eq(fp1.raceId, race.races.raceId))
       .limit(limit || 20)
       .offset(offset)
       .orderBy(fp1.time)
@@ -866,54 +925,55 @@ router.get("/current/last/fp1", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.fp1Date,
-      race.Races.fp1Time,
+      race.races.fp1Date,
+      race.races.fp1Time,
       timezone
     )
 
     const processedData = fp1Data.map((row) => ({
-      fp1Id: row.FP1.fp1Id,
-      driverId: row.FP1.driverId,
-      teamId: row.FP1.teamId,
-      time: row.FP1.time,
+      fp1Id: row.fp1.fp1Id,
+      driverId: row.fp1.driverId,
+      teamId: row.fp1.teamId,
+      time: row.fp1.time,
       driver: {
-        driverId: row.FP1.driverId,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        birthday: row.Drivers.birthday,
-        url: row.Drivers.url,
+        driverId: row.fp1.driverId,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        birthday: row.drivers.birthday,
+        url: row.drivers.url,
       },
       team: {
-        teamId: row.FP1.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.fp1.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      lapRecord: race.Circuits.lapRecord,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      corners: race.Circuits.numberOfCorners,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      lapRecord: race.circuits.lapRecord,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      corners: race.circuits.numberOfCorners,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -925,12 +985,12 @@ router.get("/current/last/fp1", async (req: Request, res: Response) => {
       total: fp1Data.length,
       season: year,
       races: {
-        round: race.Races.round,
+        round: race.races.round,
         fp1Date: localDate,
         fp1Time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         fp1Results: processedData,
       },
@@ -983,7 +1043,7 @@ router.get("/current/last/fp2", async (req: Request, res: Response) => {
       .from(fp2)
       .innerJoin(drivers, eq(fp2.driverId, drivers.driverId))
       .innerJoin(teams, eq(fp2.teamId, teams.teamId))
-      .where(eq(fp2.raceId, race.Races.raceId))
+      .where(eq(fp2.raceId, race.races.raceId))
       .limit(limit || 20)
       .offset(offset)
       .orderBy(fp2.time)
@@ -997,54 +1057,55 @@ router.get("/current/last/fp2", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.fp2Date,
-      race.Races.fp2Time,
+      race.races.fp2Date,
+      race.races.fp2Time,
       timezone
     )
 
     const processedData = fp2Data.map((row) => ({
-      fp2Id: row.FP2.fp2Id,
-      driverId: row.FP2.driverId,
-      teamId: row.FP2.teamId,
-      time: row.FP2.time,
+      fp2Id: row.fp2.fp2Id,
+      driverId: row.fp2.driverId,
+      teamId: row.fp2.teamId,
+      time: row.fp2.time,
       driver: {
-        driverId: row.FP2.driverId,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        birthday: row.Drivers.birthday,
-        url: row.Drivers.url,
+        driverId: row.fp2.driverId,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        birthday: row.drivers.birthday,
+        url: row.drivers.url,
       },
       team: {
-        teamId: row.FP2.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.fp2.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      lapRecord: race.Circuits.lapRecord,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      corners: race.Circuits.numberOfCorners,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      lapRecord: race.circuits.lapRecord,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      corners: race.circuits.numberOfCorners,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -1056,12 +1117,12 @@ router.get("/current/last/fp2", async (req: Request, res: Response) => {
       total: fp2Data.length,
       season: year,
       races: {
-        round: race.Races.round,
+        round: race.races.round,
         fp2Date: localDate,
         fp2Time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         fp2Results: processedData,
       },
@@ -1115,7 +1176,7 @@ router.get("/current/last/fp3", async (req: Request, res: Response) => {
       .from(fp3)
       .innerJoin(drivers, eq(fp3.driverId, drivers.driverId))
       .innerJoin(teams, eq(fp3.teamId, teams.teamId))
-      .where(eq(fp3.raceId, race.Races.raceId))
+      .where(eq(fp3.raceId, race.races.raceId))
       .limit(limit || 20)
       .offset(offset)
       .orderBy(fp3.time)
@@ -1129,54 +1190,55 @@ router.get("/current/last/fp3", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.fp3Date,
-      race.Races.fp3Time,
+      race.races.fp3Date,
+      race.races.fp3Time,
       timezone
     )
 
     const processedData = fp3Data.map((row) => ({
-      fp3Id: row.FP3.fp3Id,
-      driverId: row.FP3.driverId,
-      teamId: row.FP3.teamId,
-      time: row.FP3.time,
+      fp3Id: row.fp3.fp3Id,
+      driverId: row.fp3.driverId,
+      teamId: row.fp3.teamId,
+      time: row.fp3.time,
       driver: {
-        driverId: row.FP3.driverId,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        birthday: row.Drivers.birthday,
-        url: row.Drivers.url,
+        driverId: row.fp3.driverId,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        birthday: row.drivers.birthday,
+        url: row.drivers.url,
       },
       team: {
-        teamId: row.FP3.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.fp3.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      lapRecord: race.Circuits.lapRecord,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      corners: race.Circuits.numberOfCorners,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      lapRecord: race.circuits.lapRecord,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      corners: race.circuits.numberOfCorners,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -1188,12 +1250,12 @@ router.get("/current/last/fp3", async (req: Request, res: Response) => {
       total: fp3Data.length,
       season: year,
       races: {
-        round: race.Races.round,
+        round: race.races.round,
         fp3Date: localDate,
         fp3Time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         fp3Results: processedData,
       },
@@ -1266,52 +1328,53 @@ router.get(
       }
 
       const processedData = sprintRaceData.map((row) => ({
-        sprintRaceId: row.Sprint_Race.sprintRaceId,
-        position: row.Sprint_Race.finishingPosition,
-        points: row.Sprint_Race.pointsObtained,
-        grid: row.Sprint_Race.gridPosition,
-        laps: row.Sprint_Race.laps,
-        time: row.Sprint_Race.raceTime,
-        retired: row.Sprint_Race.retired,
+        sprintRaceId: row.sprint_race.sprintRaceId,
+        position: row.sprint_race.finishingPosition,
+        points: row.sprint_race.pointsObtained,
+        grid: row.sprint_race.gridPosition,
+        laps: row.sprint_race.laps,
+        time: row.sprint_race.raceTime,
+        retired: row.sprint_race.retired,
         driver: {
-          driverId: row.Drivers.driverId,
-          number: row.Drivers.number,
-          shortName: row.Drivers.shortName,
-          url: row.Drivers.url,
-          name: row.Drivers.name,
-          surname: row.Drivers.surname,
-          nationality: row.Drivers.nationality,
-          birthday: row.Drivers.birthday,
+          driverId: row.drivers.driverId,
+          number: row.drivers.number,
+          shortName: row.drivers.shortName,
+          url: row.drivers.url,
+          name: row.drivers.name,
+          surname: row.drivers.surname,
+          nationality: row.drivers.nationality,
+          birthday: row.drivers.birthday,
         },
         team: {
-          teamId: row.Teams.teamId,
-          teamName: row.Teams.teamName,
-          nationality: row.Teams.teamNationality,
-          firstAppareance: row.Teams.firstAppeareance,
-          constructorsChampionships: row.Teams.constructorsChampionships,
-          driversChampionships: row.Teams.driversChampionships,
-          url: row.Teams.url,
+          teamId: row.teams.teamId,
+          teamName: row.teams.teamName,
+          nationality: row.teams.teamNationality,
+          firstAppareance: row.teams.firstAppeareance,
+          constructorsChampionships: row.teams.constructorsChampionships,
+          driversChampionships: row.teams.driversChampionships,
+          url: row.teams.url,
         },
       }))
 
       const circuitData = {
-        circuitId: sprintRaceData[0].Circuits.circuitId,
-        circuitName: sprintRaceData[0].Circuits.circuitName,
-        country: sprintRaceData[0].Circuits.country,
-        city: sprintRaceData[0].Circuits.city,
+        circuitId: sprintRaceData[0].circuits.circuitId,
+        circuitName: sprintRaceData[0].circuits.circuitName,
+        country: sprintRaceData[0].circuits.country,
+        city: sprintRaceData[0].circuits.city,
         circuitLength:
-          sprintRaceData[0].Circuits.circuitLength !== null &&
-          sprintRaceData[0].Circuits.circuitLength !== undefined
-            ? `${sprintRaceData[0].Circuits.circuitLength}km`
+          sprintRaceData[0].circuits.circuitLength !== null &&
+          sprintRaceData[0].circuits.circuitLength !== undefined
+            ? `${sprintRaceData[0].circuits.circuitLength}km`
             : null,
-        lapRecord: sprintRaceData[0].Circuits.lapRecord,
+        lapRecord: sprintRaceData[0].circuits.lapRecord,
         firstParticipationYear:
-          sprintRaceData[0].Circuits.firstParticipationYear,
-        corners: sprintRaceData[0].Circuits.numberOfCorners,
-        fastestLapDriverId: sprintRaceData[0].Circuits.fastestLapDriverId,
-        fastestLapTeamId: sprintRaceData[0].Circuits.fastestLapTeamId,
-        fastestLapYear: sprintRaceData[0].Circuits.fastestLapYear,
-        url: sprintRaceData[0].Circuits.url,
+          sprintRaceData[0].circuits.firstParticipationYear,
+        corners: sprintRaceData[0].circuits.numberOfCorners,
+        fastestLapDriverId: sprintRaceData[0].circuits.fastestLapDriverId,
+        fastestLapTeamId: sprintRaceData[0].circuits.fastestLapTeamId,
+        fastestLapYear: sprintRaceData[0].circuits.fastestLapYear,
+        url: sprintRaceData[0].circuits.url,
+        svg: circuitSvg(sprintRaceData[0].circuits),
       }
 
       const response: SessionApiResponse = {
@@ -1404,53 +1467,54 @@ router.get(
       }
 
       const processedData = sprintQualyData.map((row) => ({
-        sprintQualyId: row.Sprint_Qualy.sprintQualyId,
-        raceId: row.Sprint_Qualy.raceId,
-        driverId: row.Sprint_Qualy.driverId,
-        teamId: row.Sprint_Qualy.teamId,
-        sq1: row.Sprint_Qualy.sq1,
-        sq2: row.Sprint_Qualy.sq2,
-        sq3: row.Sprint_Qualy.sq3,
-        gridPosition: row.Sprint_Qualy.gridPosition,
+        sprintQualyId: row.sprint_qualy.sprintQualyId,
+        raceId: row.sprint_qualy.raceId,
+        driverId: row.sprint_qualy.driverId,
+        teamId: row.sprint_qualy.teamId,
+        sq1: row.sprint_qualy.sq1,
+        sq2: row.sprint_qualy.sq2,
+        sq3: row.sprint_qualy.sq3,
+        gridPosition: row.sprint_qualy.gridPosition,
         driver: {
-          driverId: row.Drivers.driverId,
-          number: row.Drivers.number,
-          name: row.Drivers.name,
-          surname: row.Drivers.surname,
-          shortName: row.Drivers.shortName,
-          url: row.Drivers.url,
-          nationality: row.Drivers.nationality,
-          birthday: row.Drivers.birthday,
+          driverId: row.drivers.driverId,
+          number: row.drivers.number,
+          name: row.drivers.name,
+          surname: row.drivers.surname,
+          shortName: row.drivers.shortName,
+          url: row.drivers.url,
+          nationality: row.drivers.nationality,
+          birthday: row.drivers.birthday,
         },
         team: {
-          teamId: row.Teams.teamId,
-          teamName: row.Teams.teamName,
-          nationality: row.Teams.teamNationality,
-          firstAppareance: row.Teams.firstAppeareance,
-          constructorsChampionships: row.Teams.constructorsChampionships,
-          driversChampionships: row.Teams.driversChampionships,
-          url: row.Teams.url,
+          teamId: row.teams.teamId,
+          teamName: row.teams.teamName,
+          nationality: row.teams.teamNationality,
+          firstAppareance: row.teams.firstAppeareance,
+          constructorsChampionships: row.teams.constructorsChampionships,
+          driversChampionships: row.teams.driversChampionships,
+          url: row.teams.url,
         },
       }))
 
       const circuitData = {
-        circuitId: sprintQualyData[0].Circuits.circuitId,
-        circuitName: sprintQualyData[0].Circuits.circuitName,
-        country: sprintQualyData[0].Circuits.country,
-        city: sprintQualyData[0].Circuits.city,
+        circuitId: sprintQualyData[0].circuits.circuitId,
+        circuitName: sprintQualyData[0].circuits.circuitName,
+        country: sprintQualyData[0].circuits.country,
+        city: sprintQualyData[0].circuits.city,
         circuitLength:
-          sprintQualyData[0].Circuits.circuitLength !== null &&
-          sprintQualyData[0].Circuits.circuitLength !== undefined
-            ? `${sprintQualyData[0].Circuits.circuitLength}km`
+          sprintQualyData[0].circuits.circuitLength !== null &&
+          sprintQualyData[0].circuits.circuitLength !== undefined
+            ? `${sprintQualyData[0].circuits.circuitLength}km`
             : null,
-        lapRecord: sprintQualyData[0].Circuits.lapRecord,
+        lapRecord: sprintQualyData[0].circuits.lapRecord,
         firstParticipationYear:
-          sprintQualyData[0].Circuits.firstParticipationYear,
-        corners: sprintQualyData[0].Circuits.numberOfCorners,
-        fastestLapDriverId: sprintQualyData[0].Circuits.fastestLapDriverId,
-        fastestLapTeamId: sprintQualyData[0].Circuits.fastestLapTeamId,
-        fastestLapYear: sprintQualyData[0].Circuits.fastestLapYear,
-        url: sprintQualyData[0].Circuits.url,
+          sprintQualyData[0].circuits.firstParticipationYear,
+        corners: sprintQualyData[0].circuits.numberOfCorners,
+        fastestLapDriverId: sprintQualyData[0].circuits.fastestLapDriverId,
+        fastestLapTeamId: sprintQualyData[0].circuits.fastestLapTeamId,
+        fastestLapYear: sprintQualyData[0].circuits.fastestLapYear,
+        url: sprintQualyData[0].circuits.url,
+        svg: circuitSvg(sprintQualyData[0].circuits),
       }
 
       const response: SessionApiResponse = {
@@ -1532,92 +1596,96 @@ router.get("/:year", async (req: Request, res: Response) => {
     }
 
     const formattedData = seasonData.map((race) => ({
-      raceId: race.Races.raceId,
-      championshipId: race.Races.championshipId,
-      raceName: race.Races.raceName,
+      raceId: race.races.raceId,
+      championshipId: race.races.championshipId,
+      raceName: race.races.raceName,
       schedule: {
         race: convertToTimezone(
-          race.Races.raceDate,
-          race.Races.raceTime,
+          race.races.raceDate,
+          race.races.raceTime,
           timezone
         ),
         qualy: convertToTimezone(
-          race.Races.qualyDate,
-          race.Races.qualyTime,
+          race.races.qualyDate,
+          race.races.qualyTime,
           timezone
         ),
         fp1: convertToTimezone(
-          race.Races.fp1Date,
-          race.Races.fp1Time,
+          race.races.fp1Date,
+          race.races.fp1Time,
           timezone
         ),
         fp2: convertToTimezone(
-          race.Races.fp2Date,
-          race.Races.fp2Time,
+          race.races.fp2Date,
+          race.races.fp2Time,
           timezone
         ),
         fp3: convertToTimezone(
-          race.Races.fp3Date,
-          race.Races.fp3Time,
+          race.races.fp3Date,
+          race.races.fp3Time,
           timezone
         ),
         sprintQualy: convertToTimezone(
-          race.Races.sprintQualyDate,
-          race.Races.sprintQualyTime,
+          race.races.sprintQualyDate,
+          race.races.sprintQualyTime,
           timezone
         ),
         sprintRace: convertToTimezone(
-          race.Races.sprintRaceDate,
-          race.Races.sprintRaceTime,
+          race.races.sprintRaceDate,
+          race.races.sprintRaceTime,
           timezone
         ),
       },
-      laps: race.Races.laps,
-      round: race.Races.round,
-      url: race.Races.url,
+      laps: race.races.laps,
+      round: race.races.round,
+      url: race.races.url,
       fast_lap: {
-        fast_lap: race.Races.fastLap,
-        fast_lap_driver_id: race.Races.fastLapDriverId,
-        fast_lap_team_id: race.Races.fastLapTeamId,
+        fast_lap: race.races.fastLap,
+        fast_lap_driver_id: race.races.fastLapDriverId,
+        fast_lap_team_id: race.races.fastLapTeamId,
       },
       circuit: {
-        circuitId: race.Circuits.circuitId,
-        circuitName: race.Circuits.circuitName,
-        country: race.Circuits.country,
-        city: race.Circuits.city,
-        circuitLength: race.Circuits.circuitLength + "km",
-        lapRecord: race.Circuits.lapRecord,
-        firstParticipationYear: race.Circuits.firstParticipationYear,
-        corners: race.Circuits.numberOfCorners,
-        fastestLapDriverId: race.Circuits.fastestLapDriverId,
-        fastestLapTeamId: race.Circuits.fastestLapTeamId,
-        fastestLapYear: race.Circuits.fastestLapYear,
-        url: race.Circuits.url,
+        circuitId: race.circuits.circuitId,
+        circuitName: race.circuits.circuitName,
+        country: race.circuits.country,
+        city: race.circuits.city,
+        circuitLength: race.circuits.circuitLength + "km",
+        lapRecord: race.circuits.lapRecord,
+        firstParticipationYear: race.circuits.firstParticipationYear,
+        corners: race.circuits.numberOfCorners,
+        fastestLapDriverId: race.circuits.fastestLapDriverId,
+        fastestLapTeamId: race.circuits.fastestLapTeamId,
+        fastestLapYear: race.circuits.fastestLapYear,
+        url: race.circuits.url,
+        svg: circuitSvg(race.circuits),
       },
-      winner: race.Drivers?.driverId
+      winner: race.drivers?.driverId
         ? {
-            driverId: race.Drivers.driverId,
-            name: race.Drivers.name,
-            surname: race.Drivers.surname,
-            country: race.Drivers.nationality,
-            birthday: race.Drivers.birthday,
-            number: race.Drivers.number,
-            shortName: race.Drivers.shortName,
-            url: race.Drivers.url,
+            driverId: race.drivers.driverId,
+            name: race.drivers.name,
+            surname: race.drivers.surname,
+            country: race.drivers.nationality,
+            birthday: race.drivers.birthday,
+            number: race.drivers.number,
+            shortName: race.drivers.shortName,
+            url: race.drivers.url,
           }
         : null,
-      teamWinner: race.Teams?.teamId
+      teamWinner: race.teams?.teamId
         ? {
-            teamId: race.Teams.teamId,
-            teamName: race.Teams.teamName,
-            country: race.Teams.teamNationality,
-            firstAppearance: race.Teams.firstAppeareance,
-            constructorsChampionships: race.Teams.constructorsChampionships,
-            driversChampionships: race.Teams.driversChampionships,
-            url: race.Teams.url,
+            teamId: race.teams.teamId,
+            teamName: race.teams.teamName,
+            country: race.teams.teamNationality,
+            firstAppearance: race.teams.firstAppeareance,
+            constructorsChampionships: race.teams.constructorsChampionships,
+            driversChampionships: race.teams.driversChampionships,
+            url: race.teams.url,
           }
         : null,
     }))
+
+    const { championship: championshipWithParticipants, races: racesWithParticipants } =
+      await withParticipants(championship, formattedData)
 
     const response = {
       api: SITE_URL,
@@ -1627,8 +1695,8 @@ router.get("/:year", async (req: Request, res: Response) => {
       timezone: timezone || undefined,
       total: formattedData.length,
       season: parseInt(year),
-      championship: championship,
-      races: formattedData,
+      championship: championshipWithParticipants,
+      races: racesWithParticipants,
     }
 
     return res
@@ -1691,96 +1759,99 @@ router.get("/:year/:round", async (req: Request, res: Response) => {
     }
 
     const formattedData = seasonData.map((race) => ({
-      raceId: race.Races.raceId,
-      championshipId: race.Races.championshipId,
-      raceName: race.Races.raceName,
+      raceId: race.races.raceId,
+      championshipId: race.races.championshipId,
+      raceName: race.races.raceName,
       schedule: {
         race: convertToTimezone(
-          race.Races.raceDate,
-          race.Races.raceTime,
+          race.races.raceDate,
+          race.races.raceTime,
           timezone
         ),
         qualy: convertToTimezone(
-          race.Races.qualyDate,
-          race.Races.qualyTime,
+          race.races.qualyDate,
+          race.races.qualyTime,
           timezone
         ),
         fp1: convertToTimezone(
-          race.Races.fp1Date,
-          race.Races.fp1Time,
+          race.races.fp1Date,
+          race.races.fp1Time,
           timezone
         ),
         fp2: convertToTimezone(
-          race.Races.fp2Date,
-          race.Races.fp2Time,
+          race.races.fp2Date,
+          race.races.fp2Time,
           timezone
         ),
         fp3: convertToTimezone(
-          race.Races.fp3Date,
-          race.Races.fp3Time,
+          race.races.fp3Date,
+          race.races.fp3Time,
           timezone
         ),
         sprintQualy: convertToTimezone(
-          race.Races.sprintQualyDate,
-          race.Races.sprintQualyTime,
+          race.races.sprintQualyDate,
+          race.races.sprintQualyTime,
           timezone
         ),
         sprintRace: convertToTimezone(
-          race.Races.sprintRaceDate,
-          race.Races.sprintRaceTime,
+          race.races.sprintRaceDate,
+          race.races.sprintRaceTime,
           timezone
         ),
       },
-      laps: race.Races.laps,
-      round: race.Races.round,
-      url: race.Races.url,
+      laps: race.races.laps,
+      round: race.races.round,
+      url: race.races.url,
       fast_lap: {
-        fast_lap: race.Races.fastLap,
-        fast_lap_driver_id: race.Races.fastLapDriverId,
-        fast_lap_team_id: race.Races.fastLapTeamId,
+        fast_lap: race.races.fastLap,
+        fast_lap_driver_id: race.races.fastLapDriverId,
+        fast_lap_team_id: race.races.fastLapTeamId,
       },
       circuit: {
-        circuitId: race.Circuits.circuitId,
-        circuitName: race.Circuits.circuitName,
-        country: race.Circuits.country,
-        city: race.Circuits.city,
+        circuitId: race.circuits.circuitId,
+        circuitName: race.circuits.circuitName,
+        country: race.circuits.country,
+        city: race.circuits.city,
         circuitLength:
-          race.Circuits.circuitLength !== null &&
-          race.Circuits.circuitLength !== undefined
-            ? `${race.Circuits.circuitLength}km`
+          race.circuits.circuitLength !== null &&
+          race.circuits.circuitLength !== undefined
+            ? `${race.circuits.circuitLength}km`
             : null,
-        lapRecord: race.Circuits.lapRecord,
-        firstParticipationYear: race.Circuits.firstParticipationYear,
-        corners: race.Circuits.numberOfCorners,
-        fastestLapDriverId: race.Circuits.fastestLapDriverId,
-        fastestLapTeamId: race.Circuits.fastestLapTeamId,
-        fastestLapYear: race.Circuits.fastestLapYear,
-        url: race.Circuits.url,
+        lapRecord: race.circuits.lapRecord,
+        firstParticipationYear: race.circuits.firstParticipationYear,
+        corners: race.circuits.numberOfCorners,
+        fastestLapDriverId: race.circuits.fastestLapDriverId,
+        fastestLapTeamId: race.circuits.fastestLapTeamId,
+        fastestLapYear: race.circuits.fastestLapYear,
+        url: race.circuits.url,
       },
-      winner: race.Drivers?.driverId
+      winner: race.drivers?.driverId
         ? {
-            driverId: race.Drivers.driverId,
-            name: race.Drivers.name,
-            surname: race.Drivers.surname,
-            country: race.Drivers.nationality,
-            birthday: race.Drivers.birthday,
-            number: race.Drivers.number,
-            shortName: race.Drivers.shortName,
-            url: race.Drivers.url,
+            driverId: race.drivers.driverId,
+            name: race.drivers.name,
+            surname: race.drivers.surname,
+            country: race.drivers.nationality,
+            birthday: race.drivers.birthday,
+            number: race.drivers.number,
+            shortName: race.drivers.shortName,
+            url: race.drivers.url,
           }
         : null,
-      teamWinner: race.Teams?.teamId
+      teamWinner: race.teams?.teamId
         ? {
-            teamId: race.Teams.teamId,
-            teamName: race.Teams.teamName,
-            country: race.Teams.teamNationality,
-            firstAppearance: race.Teams.firstAppeareance,
-            constructorsChampionships: race.Teams.constructorsChampionships,
-            driversChampionships: race.Teams.driversChampionships,
-            url: race.Teams.url,
+            teamId: race.teams.teamId,
+            teamName: race.teams.teamName,
+            country: race.teams.teamNationality,
+            firstAppearance: race.teams.firstAppeareance,
+            constructorsChampionships: race.teams.constructorsChampionships,
+            driversChampionships: race.teams.driversChampionships,
+            url: race.teams.url,
           }
         : null,
     }))
+
+    const { championship: championshipWithParticipants, races: racesWithParticipants } =
+      await withParticipants(championship, formattedData)
 
     const response: RoundApiResponse = {
       api: SITE_URL,
@@ -1789,8 +1860,8 @@ router.get("/:year/:round", async (req: Request, res: Response) => {
       timezone: timezone ?? undefined,
       season: parseInt(year),
       round: round,
-      championship: championship,
-      race: formattedData,
+      championship: championshipWithParticipants,
+      race: racesWithParticipants,
     }
 
     return res
@@ -1851,7 +1922,7 @@ router.get("/:year/:round/race", async (req: Request, res: Response) => {
       .from(results)
       .innerJoin(drivers, eq(results.driverId, drivers.driverId))
       .innerJoin(teams, eq(results.teamId, teams.teamId))
-      .where(eq(results.raceId, race.Races.raceId))
+      .where(eq(results.raceId, race.races.raceId))
       .orderBy(results.finishingPosition)
       .limit(limit)
       .offset(offset)
@@ -1865,57 +1936,58 @@ router.get("/:year/:round/race", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      raceData[0].Races.raceDate,
-      raceData[0].Races.raceTime,
+      raceData[0].races.raceDate,
+      raceData[0].races.raceTime,
       timezone
     )
 
     const processedData = resultsData.map((result) => ({
-      position: String(result.Results.finishingPosition),
-      points: result.Results.pointsObtained,
-      grid: String(result.Results.gridPosition),
-      time: result.Results.raceTime,
-      fastLap: result.Results.fastLap,
-      retired: result.Results.retired,
+      position: String(result.results.finishingPosition),
+      points: result.results.pointsObtained,
+      grid: String(result.results.gridPosition),
+      time: result.results.raceTime,
+      fastLap: result.results.fastLap,
+      retired: result.results.retired,
       driver: {
-        driverId: result.Results.driverId,
-        number: result.Drivers.number,
-        shortName: result.Drivers.shortName,
-        url: result.Drivers.url,
-        name: result.Drivers.name,
-        surname: result.Drivers.surname,
-        nationality: result.Drivers.nationality,
-        birthday: result.Drivers.birthday,
+        driverId: result.results.driverId,
+        number: result.drivers.number,
+        shortName: result.drivers.shortName,
+        url: result.drivers.url,
+        name: result.drivers.name,
+        surname: result.drivers.surname,
+        nationality: result.drivers.nationality,
+        birthday: result.drivers.birthday,
       },
       team: {
-        teamId: result.Results.teamId,
-        teamName: result.Teams.teamName,
-        nationality: result.Teams.teamNationality,
-        firstAppareance: result.Teams.firstAppeareance,
-        constructorsChampionships: result.Teams.constructorsChampionships,
-        driversChampionships: result.Teams.driversChampionships,
-        url: result.Teams.url,
+        teamId: result.results.teamId,
+        teamName: result.teams.teamName,
+        nationality: result.teams.teamNationality,
+        firstAppareance: result.teams.firstAppeareance,
+        constructorsChampionships: result.teams.constructorsChampionships,
+        driversChampionships: result.teams.driversChampionships,
+        url: result.teams.url,
       },
     }))
 
     const circuitData = raceData.map((circuit) => {
       return {
-        circuitId: circuit.Circuits.circuitId,
-        circuitName: circuit.Circuits.circuitName,
-        country: circuit.Circuits.country,
-        city: circuit.Circuits.city,
+        circuitId: circuit.circuits.circuitId,
+        circuitName: circuit.circuits.circuitName,
+        country: circuit.circuits.country,
+        city: circuit.circuits.city,
         circuitLength:
-          circuit.Circuits.circuitLength !== null &&
-          circuit.Circuits.circuitLength !== undefined
-            ? `${circuit.Circuits.circuitLength}km`
+          circuit.circuits.circuitLength !== null &&
+          circuit.circuits.circuitLength !== undefined
+            ? `${circuit.circuits.circuitLength}km`
             : null,
-        corners: circuit.Circuits.numberOfCorners,
-        firstParticipationYear: circuit.Circuits.firstParticipationYear,
-        lapRecord: circuit.Circuits.lapRecord,
-        fastestLapDriverId: circuit.Circuits.fastestLapDriverId,
-        fastestLapTeamId: circuit.Circuits.fastestLapTeamId,
-        fastestLapYear: circuit.Circuits.fastestLapYear,
-        url: circuit.Circuits.url,
+        corners: circuit.circuits.numberOfCorners,
+        firstParticipationYear: circuit.circuits.firstParticipationYear,
+        lapRecord: circuit.circuits.lapRecord,
+        fastestLapDriverId: circuit.circuits.fastestLapDriverId,
+        fastestLapTeamId: circuit.circuits.fastestLapTeamId,
+        fastestLapYear: circuit.circuits.fastestLapYear,
+        url: circuit.circuits.url,
+        svg: circuitSvg(circuit.circuits),
       }
     })
 
@@ -1931,9 +2003,9 @@ router.get("/:year/:round/race", async (req: Request, res: Response) => {
         round: round,
         date: localDate,
         time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         results: processedData,
       },
@@ -1996,7 +2068,7 @@ router.get("/:year/:round/qualy", async (req: Request, res: Response) => {
       .from(classifications)
       .innerJoin(drivers, eq(classifications.driverId, drivers.driverId))
       .innerJoin(teams, eq(classifications.teamId, teams.teamId))
-      .where(eq(classifications.raceId, race.Races.raceId))
+      .where(eq(classifications.raceId, race.races.raceId))
       .limit(limit)
       .offset(offset)
       .orderBy(asc(classifications.gridPosition))
@@ -2010,57 +2082,58 @@ router.get("/:year/:round/qualy", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.qualyDate,
-      race.Races.qualyTime,
+      race.races.qualyDate,
+      race.races.qualyTime,
       timezone
     )
 
     const processedData = qualyData.map((row) => ({
-      classificationId: row.Classifications.classificationId,
-      driverId: row.Classifications.driverId,
-      teamId: row.Classifications.teamId,
-      q1: row.Classifications.q1,
-      q2: row.Classifications.q2,
-      q3: row.Classifications.q3,
-      gridPosition: row.Classifications.gridPosition,
+      classificationId: row.classifications.classificationId,
+      driverId: row.classifications.driverId,
+      teamId: row.classifications.teamId,
+      q1: row.classifications.q1,
+      q2: row.classifications.q2,
+      q3: row.classifications.q3,
+      gridPosition: row.classifications.gridPosition,
       driver: {
-        driverId: row.Drivers.driverId,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        url: row.Drivers.url,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        birthday: row.Drivers.birthday,
+        driverId: row.drivers.driverId,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        url: row.drivers.url,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        birthday: row.drivers.birthday,
       },
       team: {
-        teamId: row.Teams.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.teams.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      lapRecord: race.Circuits.lapRecord,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      corners: race.Circuits.numberOfCorners,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      lapRecord: race.circuits.lapRecord,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      corners: race.circuits.numberOfCorners,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -2075,9 +2148,9 @@ router.get("/:year/:round/qualy", async (req: Request, res: Response) => {
         round: round,
         qualyTime: localTime,
         qualyDate: localDate,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         qualyResults: processedData,
       },
@@ -2140,7 +2213,7 @@ router.get("/:year/:round/fp1", async (req: Request, res: Response) => {
       .from(fp1)
       .innerJoin(drivers, eq(fp1.driverId, drivers.driverId))
       .innerJoin(teams, eq(fp1.teamId, teams.teamId))
-      .where(eq(fp1.raceId, race.Races.raceId))
+      .where(eq(fp1.raceId, race.races.raceId))
       .limit(limit)
       .offset(offset)
       .orderBy(asc(fp1.time))
@@ -2154,54 +2227,55 @@ router.get("/:year/:round/fp1", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.fp1Date,
-      race.Races.fp1Time,
+      race.races.fp1Date,
+      race.races.fp1Time,
       timezone
     )
 
     const processedData = fp1Data.map((row) => ({
-      fp1Id: row.FP1.fp1Id,
-      driverId: row.FP1.driverId,
-      teamId: row.FP1.teamId,
-      time: row.FP1.time,
+      fp1Id: row.fp1.fp1Id,
+      driverId: row.fp1.driverId,
+      teamId: row.fp1.teamId,
+      time: row.fp1.time,
       driver: {
-        driverId: row.FP1.driverId,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        birthday: row.Drivers.birthday,
-        url: row.Drivers.url,
+        driverId: row.fp1.driverId,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        birthday: row.drivers.birthday,
+        url: row.drivers.url,
       },
       team: {
-        teamId: row.FP1.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.fp1.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      lapRecord: race.Circuits.lapRecord,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      corners: race.Circuits.numberOfCorners,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      lapRecord: race.circuits.lapRecord,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      corners: race.circuits.numberOfCorners,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -2216,9 +2290,9 @@ router.get("/:year/:round/fp1", async (req: Request, res: Response) => {
         round: round,
         fp1Date: localDate,
         fp1Time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         fp1Results: processedData,
       },
@@ -2281,7 +2355,7 @@ router.get("/:year/:round/fp2", async (req: Request, res: Response) => {
       .from(fp2)
       .innerJoin(drivers, eq(fp2.driverId, drivers.driverId))
       .innerJoin(teams, eq(fp2.teamId, teams.teamId))
-      .where(eq(fp2.raceId, race.Races.raceId))
+      .where(eq(fp2.raceId, race.races.raceId))
       .limit(limit)
       .offset(offset)
       .orderBy(asc(fp2.time))
@@ -2295,54 +2369,55 @@ router.get("/:year/:round/fp2", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.fp2Date,
-      race.Races.fp2Time,
+      race.races.fp2Date,
+      race.races.fp2Time,
       timezone
     )
 
     const processedData = fp2Data.map((row) => ({
-      fp2Id: row.FP2.fp2Id,
-      driverId: row.FP2.driverId,
-      teamId: row.FP2.teamId,
-      time: row.FP2.time,
+      fp2Id: row.fp2.fp2Id,
+      driverId: row.fp2.driverId,
+      teamId: row.fp2.teamId,
+      time: row.fp2.time,
       driver: {
-        driverId: row.FP2.driverId,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        birthday: row.Drivers.birthday,
-        url: row.Drivers.url,
+        driverId: row.fp2.driverId,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        birthday: row.drivers.birthday,
+        url: row.drivers.url,
       },
       team: {
-        teamId: row.FP2.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.fp2.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      lapRecord: race.Circuits.lapRecord,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      corners: race.Circuits.numberOfCorners,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      lapRecord: race.circuits.lapRecord,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      corners: race.circuits.numberOfCorners,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -2357,9 +2432,9 @@ router.get("/:year/:round/fp2", async (req: Request, res: Response) => {
         round: round,
         fp2Date: localDate,
         fp2Time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         fp2Results: processedData,
       },
@@ -2422,7 +2497,7 @@ router.get("/:year/:round/fp3", async (req: Request, res: Response) => {
       .from(fp3)
       .innerJoin(drivers, eq(fp3.driverId, drivers.driverId))
       .innerJoin(teams, eq(fp3.teamId, teams.teamId))
-      .where(eq(fp3.raceId, race.Races.raceId))
+      .where(eq(fp3.raceId, race.races.raceId))
       .limit(limit)
       .offset(offset)
       .orderBy(asc(fp3.time))
@@ -2436,54 +2511,55 @@ router.get("/:year/:round/fp3", async (req: Request, res: Response) => {
     }
 
     const { date: localDate, time: localTime } = convertToTimezone(
-      race.Races.fp3Date,
-      race.Races.fp3Time,
+      race.races.fp3Date,
+      race.races.fp3Time,
       timezone
     )
 
     const processedData = fp3Data.map((row) => ({
-      fp3Id: row.FP3.fp3Id,
-      driverId: row.FP3.driverId,
-      teamId: row.FP3.teamId,
-      time: row.FP3.time,
+      fp3Id: row.fp3.fp3Id,
+      driverId: row.fp3.driverId,
+      teamId: row.fp3.teamId,
+      time: row.fp3.time,
       driver: {
-        driverId: row.FP3.driverId,
-        name: row.Drivers.name,
-        surname: row.Drivers.surname,
-        nationality: row.Drivers.nationality,
-        number: row.Drivers.number,
-        shortName: row.Drivers.shortName,
-        birthday: row.Drivers.birthday,
-        url: row.Drivers.url,
+        driverId: row.fp3.driverId,
+        name: row.drivers.name,
+        surname: row.drivers.surname,
+        nationality: row.drivers.nationality,
+        number: row.drivers.number,
+        shortName: row.drivers.shortName,
+        birthday: row.drivers.birthday,
+        url: row.drivers.url,
       },
       team: {
-        teamId: row.FP3.teamId,
-        teamName: row.Teams.teamName,
-        nationality: row.Teams.teamNationality,
-        firstAppareance: row.Teams.firstAppeareance,
-        constructorsChampionships: row.Teams.constructorsChampionships,
-        driversChampionships: row.Teams.driversChampionships,
-        url: row.Teams.url,
+        teamId: row.fp3.teamId,
+        teamName: row.teams.teamName,
+        nationality: row.teams.teamNationality,
+        firstAppareance: row.teams.firstAppeareance,
+        constructorsChampionships: row.teams.constructorsChampionships,
+        driversChampionships: row.teams.driversChampionships,
+        url: row.teams.url,
       },
     }))
 
     const circuitData = {
-      circuitId: race.Circuits.circuitId,
-      circuitName: race.Circuits.circuitName,
-      country: race.Circuits.country,
-      city: race.Circuits.city,
+      circuitId: race.circuits.circuitId,
+      circuitName: race.circuits.circuitName,
+      country: race.circuits.country,
+      city: race.circuits.city,
       circuitLength:
-        race.Circuits.circuitLength !== null &&
-        race.Circuits.circuitLength !== undefined
-          ? `${race.Circuits.circuitLength}km`
+        race.circuits.circuitLength !== null &&
+        race.circuits.circuitLength !== undefined
+          ? `${race.circuits.circuitLength}km`
           : null,
-      lapRecord: race.Circuits.lapRecord,
-      firstParticipationYear: race.Circuits.firstParticipationYear,
-      corners: race.Circuits.numberOfCorners,
-      fastestLapDriverId: race.Circuits.fastestLapDriverId,
-      fastestLapTeamId: race.Circuits.fastestLapTeamId,
-      fastestLapYear: race.Circuits.fastestLapYear,
-      url: race.Circuits.url,
+      lapRecord: race.circuits.lapRecord,
+      firstParticipationYear: race.circuits.firstParticipationYear,
+      corners: race.circuits.numberOfCorners,
+      fastestLapDriverId: race.circuits.fastestLapDriverId,
+      fastestLapTeamId: race.circuits.fastestLapTeamId,
+      fastestLapYear: race.circuits.fastestLapYear,
+      url: race.circuits.url,
+      svg: circuitSvg(race.circuits),
     }
 
     const response: SessionApiResponse = {
@@ -2498,9 +2574,9 @@ router.get("/:year/:round/fp3", async (req: Request, res: Response) => {
         round: round,
         fp3Date: localDate,
         fp3Time: localTime,
-        url: race.Races.url,
-        raceId: race.Races.raceId,
-        raceName: race.Races.raceName,
+        url: race.races.url,
+        raceId: race.races.raceId,
+        raceName: race.races.raceName,
         circuit: circuitData,
         fp3Results: processedData,
       },
@@ -2559,53 +2635,54 @@ router.get(
       }
 
       const { date: localDate, time: localTime } = convertToTimezone(
-        sprintRaceResults[0].Races.sprintRaceDate,
-        sprintRaceResults[0].Races.sprintRaceTime,
+        sprintRaceResults[0].races.sprintRaceDate,
+        sprintRaceResults[0].races.sprintRaceTime,
         timezone
       )
 
       const processedData = sprintRaceResults.map((row) => ({
-        sprintRaceId: row.Sprint_Race.sprintRaceId,
-        driverId: row.Sprint_Race.driverId,
-        teamId: row.Sprint_Race.teamId,
-        position: row.Sprint_Race.finishingPosition,
-        gridPosition: row.Sprint_Race.gridPosition,
-        points: row.Sprint_Race.pointsObtained,
+        sprintRaceId: row.sprint_race.sprintRaceId,
+        driverId: row.sprint_race.driverId,
+        teamId: row.sprint_race.teamId,
+        position: row.sprint_race.finishingPosition,
+        gridPosition: row.sprint_race.gridPosition,
+        points: row.sprint_race.pointsObtained,
         driver: {
-          driverId: row.Drivers.driverId,
-          number: row.Drivers.number,
-          name: row.Drivers.name,
-          surname: row.Drivers.surname,
-          shortName: row.Drivers.shortName,
-          url: row.Drivers.url,
-          nationality: row.Drivers.nationality,
-          birthday: row.Drivers.birthday,
+          driverId: row.drivers.driverId,
+          number: row.drivers.number,
+          name: row.drivers.name,
+          surname: row.drivers.surname,
+          shortName: row.drivers.shortName,
+          url: row.drivers.url,
+          nationality: row.drivers.nationality,
+          birthday: row.drivers.birthday,
         },
         team: {
-          teamId: row.Teams.teamId,
-          teamName: row.Teams.teamName,
-          teamNationality: row.Teams.teamNationality,
-          firstAppeareance: row.Teams.firstAppeareance,
-          constructorsChampionships: row.Teams.constructorsChampionships,
-          driversChampionships: row.Teams.driversChampionships,
-          url: row.Teams.url,
+          teamId: row.teams.teamId,
+          teamName: row.teams.teamName,
+          teamNationality: row.teams.teamNationality,
+          firstAppeareance: row.teams.firstAppeareance,
+          constructorsChampionships: row.teams.constructorsChampionships,
+          driversChampionships: row.teams.driversChampionships,
+          url: row.teams.url,
         },
       }))
 
       const circuitData = sprintRaceResults.map((row) => {
         return {
-          circuitId: row.Circuits.circuitId,
-          circuitName: row.Circuits.circuitName,
-          country: row.Circuits.country,
-          city: row.Circuits.city,
-          circuitLength: row.Circuits.circuitLength + "km",
-          corners: row.Circuits.numberOfCorners,
-          firstParticipationYear: row.Circuits.firstParticipationYear,
-          lapRecord: row.Circuits.lapRecord,
-          fastestLapDriverId: row.Circuits.fastestLapDriverId,
-          fastestLapTeamId: row.Circuits.fastestLapTeamId,
-          fastestLapYear: row.Circuits.fastestLapYear,
-          url: row.Circuits.url,
+          circuitId: row.circuits.circuitId,
+          circuitName: row.circuits.circuitName,
+          country: row.circuits.country,
+          city: row.circuits.city,
+          circuitLength: row.circuits.circuitLength + "km",
+          corners: row.circuits.numberOfCorners,
+          firstParticipationYear: row.circuits.firstParticipationYear,
+          lapRecord: row.circuits.lapRecord,
+          fastestLapDriverId: row.circuits.fastestLapDriverId,
+          fastestLapTeamId: row.circuits.fastestLapTeamId,
+          fastestLapYear: row.circuits.fastestLapYear,
+          url: row.circuits.url,
+          svg: circuitSvg(row.circuits),
         }
       })
 
@@ -2621,9 +2698,9 @@ router.get(
           round: round,
           date: localDate,
           time: localTime,
-          url: sprintRaceResults[0].Races.url,
-          raceId: sprintRaceResults[0].Races.raceId,
-          raceName: sprintRaceResults[0].Races.raceName,
+          url: sprintRaceResults[0].races.url,
+          raceId: sprintRaceResults[0].races.raceId,
+          raceName: sprintRaceResults[0].races.raceName,
           circuit: circuitData[0],
           sprintRaceResults: processedData,
         },
@@ -2683,54 +2760,55 @@ router.get(
       }
 
       const { date: localDate, time: localTime } = convertToTimezone(
-        sprintQualyResults[0].Races.sprintQualyDate,
-        sprintQualyResults[0].Races.sprintQualyTime,
+        sprintQualyResults[0].races.sprintQualyDate,
+        sprintQualyResults[0].races.sprintQualyTime,
         timezone
       )
 
       const processedData = sprintQualyResults.map((row) => ({
-        sprintQualyId: row.Sprint_Qualy.sprintQualyId,
-        driverId: row.Sprint_Qualy.driverId,
-        teamId: row.Sprint_Qualy.teamId,
-        sq1: row.Sprint_Qualy.sq1,
-        sq2: row.Sprint_Qualy.sq2,
-        sq3: row.Sprint_Qualy.sq3,
-        gridPosition: row.Sprint_Qualy.gridPosition,
+        sprintQualyId: row.sprint_qualy.sprintQualyId,
+        driverId: row.sprint_qualy.driverId,
+        teamId: row.sprint_qualy.teamId,
+        sq1: row.sprint_qualy.sq1,
+        sq2: row.sprint_qualy.sq2,
+        sq3: row.sprint_qualy.sq3,
+        gridPosition: row.sprint_qualy.gridPosition,
         driver: {
-          driverId: row.Drivers.driverId,
-          number: row.Drivers.number,
-          name: row.Drivers.name,
-          surname: row.Drivers.surname,
-          shortName: row.Drivers.shortName,
-          url: row.Drivers.url,
-          nationality: row.Drivers.nationality,
-          birthday: row.Drivers.birthday,
+          driverId: row.drivers.driverId,
+          number: row.drivers.number,
+          name: row.drivers.name,
+          surname: row.drivers.surname,
+          shortName: row.drivers.shortName,
+          url: row.drivers.url,
+          nationality: row.drivers.nationality,
+          birthday: row.drivers.birthday,
         },
         team: {
-          teamId: row.Teams.teamId,
-          teamName: row.Teams.teamName,
-          teamNationality: row.Teams.teamNationality,
-          firstAppeareance: row.Teams.firstAppeareance,
-          constructorsChampionships: row.Teams.constructorsChampionships,
-          driversChampionships: row.Teams.driversChampionships,
-          url: row.Teams.url,
+          teamId: row.teams.teamId,
+          teamName: row.teams.teamName,
+          teamNationality: row.teams.teamNationality,
+          firstAppeareance: row.teams.firstAppeareance,
+          constructorsChampionships: row.teams.constructorsChampionships,
+          driversChampionships: row.teams.driversChampionships,
+          url: row.teams.url,
         },
       }))
 
       const circuitData = sprintQualyResults.map((row) => {
         return {
-          circuitId: row.Circuits.circuitId,
-          circuitName: row.Circuits.circuitName,
-          country: row.Circuits.country,
-          city: row.Circuits.city,
-          circuitLength: row.Circuits.circuitLength + "km",
-          corners: row.Circuits.numberOfCorners,
-          firstParticipationYear: row.Circuits.firstParticipationYear,
-          lapRecord: row.Circuits.lapRecord,
-          fastestLapDriverId: row.Circuits.fastestLapDriverId,
-          fastestLapTeamId: row.Circuits.fastestLapTeamId,
-          fastestLapYear: row.Circuits.fastestLapYear,
-          url: row.Circuits.url,
+          circuitId: row.circuits.circuitId,
+          circuitName: row.circuits.circuitName,
+          country: row.circuits.country,
+          city: row.circuits.city,
+          circuitLength: row.circuits.circuitLength + "km",
+          corners: row.circuits.numberOfCorners,
+          firstParticipationYear: row.circuits.firstParticipationYear,
+          lapRecord: row.circuits.lapRecord,
+          fastestLapDriverId: row.circuits.fastestLapDriverId,
+          fastestLapTeamId: row.circuits.fastestLapTeamId,
+          fastestLapYear: row.circuits.fastestLapYear,
+          url: row.circuits.url,
+          svg: circuitSvg(row.circuits),
         }
       })
 
@@ -2746,9 +2824,9 @@ router.get(
           round: round,
           date: localDate,
           time: localTime,
-          url: sprintQualyResults[0].Races.url,
-          raceId: sprintQualyResults[0].Races.raceId,
-          raceName: sprintQualyResults[0].Races.raceName,
+          url: sprintQualyResults[0].races.url,
+          raceId: sprintQualyResults[0].races.raceId,
+          raceName: sprintQualyResults[0].races.raceName,
           circuit: circuitData[0],
           sprintQualyResults: processedData,
         },

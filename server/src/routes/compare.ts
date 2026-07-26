@@ -69,28 +69,28 @@ router.get(
 
       const sql = `
     SELECT
-      COUNT(r1.Race_ID) AS Total_Races,
-      SUM(CASE WHEN r1.Grid_Position < r2.Grid_Position THEN 1 ELSE 0 END) AS Driver1_BetterQualifying,
-      SUM(CASE WHEN r2.Grid_Position < r1.Grid_Position THEN 1 ELSE 0 END) AS Driver2_BetterQualifying,
-      MIN(r1.Grid_Position) AS Driver1_BestQualifying,
-      MIN(r2.Grid_Position) AS Driver2_BestQualifying,
-      SUM(CASE WHEN r1.Finishing_Position < r2.Finishing_Position THEN 1 ELSE 0 END) AS Driver1_BetterRaceFinish,
-      SUM(CASE WHEN r2.Finishing_Position < r1.Finishing_Position THEN 1 ELSE 0 END) AS Driver2_BetterRaceFinish,
-      MIN(r1.Finishing_Position) AS Driver1_BestRaceFinish,
-      MIN(r2.Finishing_Position) AS Driver2_BestRaceFinish,
-      SUM(CASE WHEN r1.Finishing_Position <= 10 THEN 1 ELSE 0 END) AS Driver1_PointFinishes,
-      SUM(CASE WHEN r2.Finishing_Position <= 10 THEN 1 ELSE 0 END) AS Driver2_PointFinishes,
-      SUM(CASE WHEN r1.Finishing_Position <= 3 THEN 1 ELSE 0 END) AS Driver1_Podiums,
-      SUM(CASE WHEN r2.Finishing_Position <= 3 THEN 1 ELSE 0 END) AS Driver2_Podiums,
-      SUM(CASE WHEN r1.Grid_Position = 1 THEN 1 ELSE 0 END) AS Driver1_Poles,
-      SUM(CASE WHEN r2.Grid_Position = 1 THEN 1 ELSE 0 END) AS Driver2_Poles,
-      SUM(CASE WHEN r1.Retired IS NOT NULL AND TRIM(r1.Retired) <> '' THEN 1 ELSE 0 END) AS Driver1_DNFs,
-      SUM(CASE WHEN r2.Retired IS NOT NULL AND TRIM(r2.Retired) <> '' THEN 1 ELSE 0 END) AS Driver2_DNFs
-    FROM Results r1
-    JOIN Results r2 ON r1.Race_ID = r2.Race_ID AND r2.Driver_ID = ?
-    JOIN Races rr ON rr.Race_ID = r1.Race_ID
-    WHERE r1.Driver_ID = ?
-      AND rr.Championship_ID = ?;
+      COUNT(r1.race_id) AS "Total_Races",
+      SUM(CASE WHEN r1.grid_position < r2.grid_position THEN 1 ELSE 0 END) AS "Driver1_BetterQualifying",
+      SUM(CASE WHEN r2.grid_position < r1.grid_position THEN 1 ELSE 0 END) AS "Driver2_BetterQualifying",
+      MIN(r1.grid_position) AS "Driver1_BestQualifying",
+      MIN(r2.grid_position) AS "Driver2_BestQualifying",
+      SUM(CASE WHEN r1.finishing_position < r2.finishing_position THEN 1 ELSE 0 END) AS "Driver1_BetterRaceFinish",
+      SUM(CASE WHEN r2.finishing_position < r1.finishing_position THEN 1 ELSE 0 END) AS "Driver2_BetterRaceFinish",
+      MIN(r1.finishing_position) AS "Driver1_BestRaceFinish",
+      MIN(r2.finishing_position) AS "Driver2_BestRaceFinish",
+      SUM(CASE WHEN r1.finishing_position <= 10 THEN 1 ELSE 0 END) AS "Driver1_PointFinishes",
+      SUM(CASE WHEN r2.finishing_position <= 10 THEN 1 ELSE 0 END) AS "Driver2_PointFinishes",
+      SUM(CASE WHEN r1.finishing_position <= 3 THEN 1 ELSE 0 END) AS "Driver1_Podiums",
+      SUM(CASE WHEN r2.finishing_position <= 3 THEN 1 ELSE 0 END) AS "Driver2_Podiums",
+      SUM(CASE WHEN r1.grid_position = 1 THEN 1 ELSE 0 END) AS "Driver1_Poles",
+      SUM(CASE WHEN r2.grid_position = 1 THEN 1 ELSE 0 END) AS "Driver2_Poles",
+      SUM(CASE WHEN r1.retired IS NOT NULL AND TRIM(r1.retired) <> '' THEN 1 ELSE 0 END) AS "Driver1_DNFs",
+      SUM(CASE WHEN r2.retired IS NOT NULL AND TRIM(r2.retired) <> '' THEN 1 ELSE 0 END) AS "Driver2_DNFs"
+    FROM results r1
+    JOIN results r2 ON r1.race_id = r2.race_id AND r2.driver_id = $1
+    JOIN races rr ON rr.race_id = r1.race_id
+    WHERE r1.driver_id = $2
+      AND rr.championship_id = $3;
     `
 
       const driversPointsData = await db
@@ -132,31 +132,31 @@ router.get(
         pointsMap.set(entry.driverId, entry.points)
       })
 
-      const driver1Points = driversPointsData[0].Driver_Classifications.points
-      const driver2Points = driversPointsData[1].Driver_Classifications.points
+      const driver1Points = driversPointsData[0].driver_classifications.points
+      const driver2Points = driversPointsData[1].driver_classifications.points
 
       const driversInfo = [
         {
           driverId1: driverId1,
-          name: driversPointsData[0].Drivers.name,
-          surname: driversPointsData[0].Drivers.surname,
-          nationality: driversPointsData[0].Drivers.nationality,
-          birthday: driversPointsData[0].Drivers.birthday,
-          number: driversPointsData[0].Drivers.number,
-          shortName: driversPointsData[0].Drivers.shortName,
-          url: driversPointsData[0].Drivers.url,
-          teamId: driversPointsData[0].Driver_Classifications.teamId,
+          name: driversPointsData[0].drivers.name,
+          surname: driversPointsData[0].drivers.surname,
+          nationality: driversPointsData[0].drivers.nationality,
+          birthday: driversPointsData[0].drivers.birthday,
+          number: driversPointsData[0].drivers.number,
+          shortName: driversPointsData[0].drivers.shortName,
+          url: driversPointsData[0].drivers.url,
+          teamId: driversPointsData[0].driver_classifications.teamId,
         },
         {
           driverId2: driverId2,
-          name: driversPointsData[1].Drivers.name,
-          surname: driversPointsData[1].Drivers.surname,
-          nationality: driversPointsData[1].Drivers.nationality,
-          birthday: driversPointsData[1].Drivers.birthday,
-          number: driversPointsData[1].Drivers.number,
-          shortName: driversPointsData[1].Drivers.shortName,
-          url: driversPointsData[1].Drivers.url,
-          teamId: driversPointsData[1].Driver_Classifications.teamId,
+          name: driversPointsData[1].drivers.name,
+          surname: driversPointsData[1].drivers.surname,
+          nationality: driversPointsData[1].drivers.nationality,
+          birthday: driversPointsData[1].drivers.birthday,
+          number: driversPointsData[1].drivers.number,
+          shortName: driversPointsData[1].drivers.shortName,
+          url: driversPointsData[1].drivers.url,
+          teamId: driversPointsData[1].driver_classifications.teamId,
         },
       ]
 
@@ -168,8 +168,8 @@ router.get(
             [driverId2]: driver2Points,
           },
           position: {
-            [driverId1]: driversPointsData[0].Driver_Classifications.position,
-            [driverId2]: driversPointsData[1].Driver_Classifications.position,
+            [driverId1]: driversPointsData[0].driver_classifications.position,
+            [driverId2]: driversPointsData[1].driver_classifications.position,
           },
         },
         raceComparison: {
@@ -181,8 +181,8 @@ router.get(
           [driverId2]: result.Driver1_BetterQualifying,
         },
         wins: {
-          [driverId1]: driversPointsData[0].Driver_Classifications.wins,
-          [driverId2]: driversPointsData[1].Driver_Classifications.wins,
+          [driverId1]: driversPointsData[0].driver_classifications.wins,
+          [driverId2]: driversPointsData[1].driver_classifications.wins,
         },
         podiums: {
           [driverId1]: result.Driver2_Podiums,

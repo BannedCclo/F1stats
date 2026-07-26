@@ -1,5 +1,5 @@
 import { generateRaceId, formatDriver, formatTeam } from "../utils.js"
-import { clientWriter } from "../../turso.js"
+import { clientWriter } from "../../db.js"
 
 export const getSprintRaceResults = async (year, race, page) => {
   const raceId = generateRaceId(race, year)

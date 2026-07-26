@@ -27,7 +27,7 @@ test.describe("GET /api/circuits", async () => {
         country: expect.any(String),
         city: expect.any(String),
         circuitLength: expect.any(Number),
-        numberOfCorners: expect.any(Number),
+        corners: expect.any(Number),
         firstParticipationYear: expect.any(Number),
         lapRecord: expect.any(String),
         fastestLapDriverId: expect.any(String),
@@ -35,6 +35,7 @@ test.describe("GET /api/circuits", async () => {
         fastestLapYear: expect.any(Number),
         url: expect.any(String),
       })
+      expect(circuit).toHaveProperty("svg")
     }
   })
 

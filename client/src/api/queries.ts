@@ -8,15 +8,15 @@ import type {
   RawCircuitsResponse,
   RawCircuitDetailResponse,
   RawDriverByIdResponse,
-  RawDriverDetailResponse,
+  RawDriverClassificationsResponse,
   RawDriversResponse,
   RawSeasonResponse,
   RawSeasonsResponse,
   RawSessionResultsResponse,
   RawSingleRaceResponse,
   RawStandingsResponse,
+  RawTeamClassificationsResponse,
   RawTeamDetailResponse,
-  RawTeamDriversResponse,
   RawTeamsResponse,
 } from './types'
 
@@ -184,47 +184,12 @@ export function useDriversByYear(year: YearParam, limit: number, offset: number)
   })
 }
 
-const FIRST_F1_SEASON = 1950
-const SEASON_SCAN_BATCH_SIZE = 8
-
-/**
- * There's no "which years did this driver race" endpoint — a retired driver's
- * `current` lookup just 404s. On that failure, scan backward from last year in
- * small concurrent batches (newest-first) until a season with results turns
- * up; that's the driver's most recent season.
- */
-async function fetchDriverMostRecentSeason(driverId: string): Promise<RawDriverDetailResponse> {
-  try {
-    return await apiGet<RawDriverDetailResponse>(endpoints.driverByYear('current', driverId))
-  } catch (err) {
-    if (!(err instanceof NotYetAvailableError)) throw err
-  }
-
-  const currentYear = new Date().getFullYear()
-  for (let end = currentYear - 1; end >= FIRST_F1_SEASON; end -= SEASON_SCAN_BATCH_SIZE) {
-    const start = Math.max(FIRST_F1_SEASON, end - SEASON_SCAN_BATCH_SIZE + 1)
-    const years: number[] = []
-    for (let y = end; y >= start; y--) years.push(y)
-
-    const settled = await Promise.allSettled(
-      years.map((y) => apiGet<RawDriverDetailResponse>(endpoints.driverByYear(y, driverId))),
-    )
-    let best: { year: number; data: RawDriverDetailResponse } | null = null
-    settled.forEach((result, i) => {
-      if (result.status === 'fulfilled' && (best === null || years[i] > best.year)) {
-        best = { year: years[i], data: result.value }
-      }
-    })
-    if (best) return best.data
-  }
-
-  throw new NotYetAvailableError(`/drivers/${driverId} (no season found)`)
-}
-
-export function useDriverMostRecentSeason(driverId: string | undefined) {
+/** This driver's standing (position, points, wins, team) in every season they've raced. */
+export function useDriverClassifications(driverId: string | undefined) {
   return useQuery({
-    queryKey: ['driver-most-recent-season', driverId],
-    queryFn: () => fetchDriverMostRecentSeason(driverId!),
+    queryKey: ['driver-classifications', driverId],
+    queryFn: () =>
+      apiGet<RawDriverClassificationsResponse>(endpoints.driverClassifications(driverId!)),
     enabled: !!driverId,
     staleTime: Infinity,
   })
@@ -276,13 +241,14 @@ export function useTeamByYear(year: YearParam, teamId: string | undefined) {
   })
 }
 
-export function useTeamDriversByYear(year: YearParam, teamId: string | undefined) {
+/** This team's standing (position, points, wins, races entered) in every season it competed. */
+export function useTeamClassifications(teamId: string | undefined) {
   return useQuery({
-    queryKey: ['team-drivers-by-year', year, teamId],
-    queryFn: () => apiGet<RawTeamDriversResponse>(endpoints.teamDriversByYear(year, teamId!)),
+    queryKey: ['team-classifications', teamId],
+    queryFn: () =>
+      apiGet<RawTeamClassificationsResponse>(endpoints.teamClassifications(teamId!)),
     enabled: !!teamId,
-    staleTime: yearStaleTime(year),
-    select: (data) => ({ ...data, drivers: dedupeDrivers(data.drivers.map((e) => e.driver)).map((driver) => ({ driver })) }),
+    staleTime: Infinity,
   })
 }
 

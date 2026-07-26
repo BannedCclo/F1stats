@@ -1,4 +1,4 @@
-import { clientWriter } from "../turso.js"
+import { clientWriter } from "../db.js"
 
 export const insertDrivers = async (drivers) => {
   try {

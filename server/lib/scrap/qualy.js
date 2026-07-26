@@ -1,5 +1,5 @@
 import { formatDriver, formatTeam, generateRaceId } from "./utils.js"
-import { clientWriter } from "../turso.js"
+import { clientWriter } from "../db.js"
 
 export const getQualyResults = async (year, race, page) => {
   const raceId = generateRaceId(race, year)
