@@ -28,18 +28,18 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
     if (this.state.error) {
       return (
         <div className="mx-auto flex min-h-[60svh] max-w-2xl flex-col items-center justify-center gap-4 px-6 text-center">
-          <p className="font-data text-sm text-kerb">ERROR</p>
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight text-chalk">
+          <p className="font-data text-sm text-rosso emissive">ERROR</p>
+          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight text-readout">
             Something broke
           </h1>
-          <p className="text-sm text-smoke">The page hit an unexpected error. Reloading usually fixes it.</p>
+          <p className="text-sm text-dim">The page hit an unexpected error. Reloading usually fixes it.</p>
           <button
             type="button"
             onClick={() => {
               this.setState({ error: null })
               window.location.reload()
             }}
-            className="mt-2 border border-kerb px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-kerb hover:bg-kerb hover:text-chalk"
+            className="mt-2 border border-rosso px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-rosso hover:bg-rosso hover:text-carbon"
           >
             Reload
           </button>

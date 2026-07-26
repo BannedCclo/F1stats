@@ -8,6 +8,7 @@ import type {
 } from '@/api/types'
 import type { TimingTowerItem } from '@/components/timing/TimingTower'
 import { driverCode, formatLapTime, formatPoints, formatPosition, formatResultTime, parseLapTimeToMs } from './format'
+import { positionDelta, retiredStatus } from './timingSemantics'
 
 export function driverStandingToTimingItem(item: RawStandingItem): TimingTowerItem {
   const driverId = item.driverId ?? item.driver?.driverId ?? String(item.classificationId)
@@ -36,11 +37,11 @@ export function constructorStandingToTimingItem(item: RawStandingItem): TimingTo
   }
 }
 
-function withFastestLapSector(items: TimingTowerItem[], timesMs: (number | null)[]): TimingTowerItem[] {
+function withFastestLap(items: TimingTowerItem[], timesMs: (number | null)[]): TimingTowerItem[] {
   const valid = timesMs.filter((t): t is number => t !== null)
   if (valid.length === 0) return items
   const fastest = Math.min(...valid)
-  return items.map((item, i) => (timesMs[i] === fastest ? { ...item, sector: 'purple' as const } : item))
+  return items.map((item, i) => (timesMs[i] === fastest ? { ...item, status: 'fastest' as const } : item))
 }
 
 export function raceResultsToTimingItems(results: RawRaceResult[]): TimingTowerItem[] {
@@ -52,9 +53,10 @@ export function raceResultsToTimingItems(results: RawRaceResult[]): TimingTowerI
     label: `${r.driver.name} ${r.driver.surname}`,
     value: formatResultTime(r.time),
     href: `/drivers/${r.driver.driverId}`,
+    status: retiredStatus(r.retired) ?? positionDelta(r.grid, r.position),
   }))
   const timesMs = results.map((r) => parseLapTimeToMs(r.fastLap))
-  return withFastestLapSector(items, timesMs)
+  return withFastestLap(items, timesMs)
 }
 
 export function sprintRaceResultsToTimingItems(results: RawSprintRaceResult[]): TimingTowerItem[] {
@@ -66,6 +68,7 @@ export function sprintRaceResultsToTimingItems(results: RawSprintRaceResult[]): 
     label: `${r.driver.name} ${r.driver.surname}`,
     value: r.time ? formatResultTime(r.time) : `${formatPoints(r.points)} pts`,
     href: `/drivers/${r.driver.driverId}`,
+    status: positionDelta(r.gridPosition, r.position),
   }))
 }
 
@@ -80,7 +83,7 @@ export function qualyResultsToTimingItems(results: RawQualyResult[]): TimingTowe
     href: `/drivers/${r.driver.driverId}`,
   }))
   const timesMs = results.map((r) => parseLapTimeToMs(r.q3 ?? r.q2 ?? r.q1))
-  return withFastestLapSector(items, timesMs)
+  return withFastestLap(items, timesMs)
 }
 
 export function sprintQualyResultsToTimingItems(results: RawSprintQualyResult[]): TimingTowerItem[] {
@@ -94,7 +97,7 @@ export function sprintQualyResultsToTimingItems(results: RawSprintQualyResult[])
     href: `/drivers/${r.driver.driverId}`,
   }))
   const timesMs = results.map((r) => parseLapTimeToMs(r.sq3 ?? r.sq2 ?? r.sq1))
-  return withFastestLapSector(items, timesMs)
+  return withFastestLap(items, timesMs)
 }
 
 export function practiceResultsToTimingItems(results: RawPracticeResult[]): TimingTowerItem[] {
@@ -108,5 +111,5 @@ export function practiceResultsToTimingItems(results: RawPracticeResult[]): Timi
     href: `/drivers/${r.driver.driverId}`,
   }))
   const timesMs = results.map((r) => parseLapTimeToMs(r.time))
-  return withFastestLapSector(items, timesMs)
+  return withFastestLap(items, timesMs)
 }

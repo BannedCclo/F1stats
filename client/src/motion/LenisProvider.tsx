@@ -1,16 +1,13 @@
 import { useEffect, type ReactNode } from 'react'
 import Lenis from 'lenis'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { prefersReducedMotion } from './reducedMotion'
 
-gsap.registerPlugin(ScrollTrigger)
-
 /**
- * Global smooth-scroll wrapper, driven by GSAP's ticker so Lenis and
- * ScrollTrigger (used by useScrollDraw) stay in sync. Skipped entirely
- * under reduced-motion — native scroll behaves normally, no Lenis instance
- * is even created, and ScrollTrigger-based reveals fall back to instant.
+ * Global smooth-scroll wrapper. Lenis drives its own rAF loop (autoRaf) and
+ * dispatches native scroll events, so IntersectionObserver-based reveals
+ * (useRevealOnScroll, useScrollDraw, useCountUp) keep working untouched.
+ * Skipped entirely under reduced-motion — no Lenis instance is even created,
+ * so scroll behaves natively.
  */
 export default function LenisProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -19,16 +16,10 @@ export default function LenisProvider({ children }: { children: ReactNode }) {
     const lenis = new Lenis({
       duration: 1.1,
       easing: (t) => Math.min(1, 1 - Math.pow(2, -10 * t)),
+      autoRaf: true,
     })
 
-    lenis.on('scroll', ScrollTrigger.update)
-
-    const tick = (time: number) => lenis.raf(time * 1000)
-    gsap.ticker.add(tick)
-    gsap.ticker.lagSmoothing(0)
-
     return () => {
-      gsap.ticker.remove(tick)
       lenis.destroy()
     }
   }, [])

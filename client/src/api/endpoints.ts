@@ -48,8 +48,11 @@ export const endpoints = {
   teamsByYear: (year: number | 'current', limit?: number, offset?: number) =>
     `/${year}/teams${qs({ limit, offset })}`,
   teamByYear: (year: number | 'current', teamId: string) => `/${year}/teams/${teamId}`,
+  teamDrivers: (year: number | 'current', teamId: string) => `/${year}/teams/${teamId}/drivers`,
 
   circuits: (limit?: number, offset?: number) => `/circuits${qs({ limit, offset })}`,
   circuitSearch: (q: string) => `/circuits/search${qs({ q })}`,
   circuit: (circuitId: string) => `/circuits/${circuitId}`,
+
+  compare: (year: number, driverId1: string, driverId2: string) => `/${year}/compare/${driverId1}/${driverId2}`,
 }

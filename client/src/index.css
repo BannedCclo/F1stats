@@ -1,31 +1,64 @@
 @import 'tailwindcss';
 
-@import '@fontsource/saira-condensed/700.css';
-@import '@fontsource/saira-condensed/800.css';
-@import '@fontsource/instrument-sans/400.css';
-@import '@fontsource/instrument-sans/500.css';
+/* One variable family covers display + body (wght 100-900, wdth 62-125%).
+   The width axis is what carries the personality — F1 cars are the widest,
+   lowest things in motorsport, so display type breathes open on entrance. */
+@import '@fontsource-variable/archivo';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 
-@theme {
-  /* Surfaces */
-  --color-asphalt: #0a0a0b;
-  --color-carbon: #141417;
-  --color-graphite: #232329;
-  --color-chalk: #f2f2f0;
-  --color-smoke: #8a8a93;
-  --color-kerb: #e10600;
-  --color-kerb-dim: #8c0400;
+/* Registering these lets the browser interpolate them natively — a plain CSS
+   transition on :root does the team-livery re-theme with zero JS per frame,
+   and there is nothing for a leftover animation to get stuck mid-tween on. */
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #eaf0f6;
+}
 
-  /* Sector semantics */
-  --color-sector-purple: #b14cff;
-  --color-sector-green: #00d26a;
-  --color-sector-yellow: #ffd230;
+@property --accent-contrast {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #0a0d11;
+}
+
+/* Tweened by useTypeWidth on the Archivo variable font's width axis. Falls
+   back to the static value with no JS. */
+@property --display-wdth {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 118%;
+}
+
+@theme {
+  /* Surfaces — the pit wall monitor, not the broadcast graphic */
+  --color-carbon: #0a0d11;
+  --color-panel: #11161d;
+  --color-bezel: #171e27;
+  --color-hairline: #232d3a;
+  --color-readout: #eaf0f6;
+  --color-dim: #8794a3;
+
+  /* FIA timing-screen semantics — each colour is backed by real data */
+  --color-fastest: #b15cff; /* fastest lap of the session */
+  --color-gain: #24e07a; /* personal best / places gained */
+  --color-offpace: #ffc93c; /* off the pace / yellow flag */
+  --color-rosso: #ff2d3f; /* retired / places lost / live-now */
+
+  /* Dynamic livery accent — always dressed as somebody: the entity on a
+     detail page, the season champion, the current championship leader.
+     Never arbitrary; falls back to --color-readout when there's no entity. */
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
 
   /* Type */
-  --font-display: 'Saira Condensed', system-ui, sans-serif;
-  --font-body: 'Instrument Sans', system-ui, sans-serif;
+  --font-display: 'Archivo Variable', system-ui, sans-serif;
+  --font-body: 'Archivo Variable', system-ui, sans-serif;
   --font-data: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Fluid display scale — clamp() so a heading never breaks composition */
+  --text-display-xl: clamp(3.5rem, 12vw, 11rem);
+  --text-display-l: clamp(2.5rem, 6vw, 5rem);
 }
 
 :root {
@@ -34,6 +67,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Registered above via @property, so this is a native color interpolation —
+     useThemeAccent only ever calls setProperty; no per-frame JS, and nothing
+     can leave a stuck mid-tween value behind on route change. */
+  /* The global prefers-reduced-motion block below already crushes this via
+     the universal *,*::before,*::after selector — html matches * too. */
+  transition: --accent 500ms ease, --accent-contrast 500ms ease;
 }
 
 html,
@@ -44,8 +83,8 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-asphalt);
-  color: var(--color-chalk);
+  background: var(--color-carbon);
+  color: var(--color-readout);
   font-family: var(--font-body);
   overflow-x: hidden;
 }
@@ -54,18 +93,26 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Visible keyboard focus everywhere, no exceptions */
+/* Display type breathes open on entrance. Driven by a registered custom
+   property so anime.js can tween the width axis; falls back to the static
+   value with no JS. */
+.display-wide {
+  font-stretch: var(--display-wdth, 118%);
+}
+
+/* Visible keyboard focus everywhere, no exceptions — now in the livery accent */
 :focus-visible {
-  outline: 2px solid var(--color-kerb);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-/* Kerb zebra — signature section divider / loading motif */
+/* Kerb zebra — kerbs mark track limits, so this marks boundaries only:
+   the live/now indicator and the edge of the archive. Not a generic divider. */
 .kerb-zebra {
   background-image: repeating-linear-gradient(
     -45deg,
-    var(--color-kerb) 0 10px,
-    var(--color-chalk) 10px 20px
+    var(--color-rosso) 0 10px,
+    var(--color-carbon) 10px 20px
   );
 }
 
@@ -73,8 +120,8 @@ body {
 .kerb-zebra-loading {
   background-image: repeating-linear-gradient(
     -45deg,
-    var(--color-kerb) 0 10px,
-    var(--color-chalk) 10px 20px
+    var(--color-rosso) 0 10px,
+    var(--color-carbon) 10px 20px
   );
   animation: kerb-slide 1.1s linear infinite;
 }
@@ -86,6 +133,32 @@ body {
   to {
     background-position: 28px 0;
   }
+}
+
+/* Timing-screen glow in place of soft shadows — reserved for accent numbers */
+.emissive {
+  text-shadow: 0 0 12px color-mix(in oklab, currentColor 45%, transparent);
+}
+
+/* Fixed hairline grid overlay + radial vignette — the monitor bezel */
+.grid-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--color-hairline) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-hairline) 55%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.03;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+}
+
+/* Fades the edges of a horizontally-scrolling strip so a partially-visible
+   item reads as "more to scroll", not as content that got clipped. */
+.scroll-fade-x {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 32px, black calc(100% - 32px), transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -20,7 +20,7 @@ export default function CountryFlag({ country, className }: CountryFlagProps) {
         role="img"
         aria-label={country ?? undefined}
         title={country ?? undefined}
-        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center font-data text-[7px] text-smoke ${className ?? ''}`}
+        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center font-data text-[7px] text-dim ${className ?? ''}`}
       >
         {country ? country.slice(0, 2).toUpperCase() : '—'}
       </span>

@@ -1,62 +1,88 @@
-import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
+import { animate, stagger } from 'animejs'
+import clsx from 'clsx'
 import type { RawRace } from '@/api/types'
 import { useI18n } from '@/i18n/useI18n'
 import { formatDate } from '@/domain/format'
-import { useReducedMotion } from '@/motion/reducedMotion'
+import { useAnimeScope } from '@/motion/useAnimeScope'
+import { useDraggableStrip } from '@/motion/useDraggableStrip'
 import CircuitTrace from '@/components/circuit/CircuitTrace'
 
 interface SeasonTimelineProps {
   year: string | number
   races: RawRace[]
+  activeRaceId?: string | number | null
+  onActivateRace?: (race: RawRace) => void
 }
 
 /**
  * The season calendar as a horizontally scrollable strip with scroll-snap.
- * Cards fade/scale in as they enter view (Motion's `whileInView`, which
- * only ever toggles opacity/transform — no DOM insertion, so it can't
- * corrupt page layout the way a GSAP ScrollTrigger `pin` can in a
- * client-routed SPA, which is what caused the app-wide scroll lockup this
- * component used to cause after a single visit to this page).
+ * Cards fade in on enter, staggered along the strip. Click-and-drag scrolling
+ * (useDraggableStrip) layers on top of the native overflow-x-auto scroll —
+ * touch, trackpad, and keyboard all keep working exactly as before.
+ *
+ * This only ever animates opacity/transform on existing nodes — it never
+ * pins the scroller. A GSAP ScrollTrigger `pin` here previously caused an
+ * app-wide scroll lockup that persisted after routing away; anime.js has
+ * replaced GSAP entirely, but pinning stays off-limits regardless of library.
  */
-export default function SeasonTimeline({ year, races }: SeasonTimelineProps) {
+export default function SeasonTimeline({ year, races, activeRaceId, onActivateRace }: SeasonTimelineProps) {
   const { t, locale } = useI18n()
-  const reduced = useReducedMotion()
+
+  const root = useAnimeScope<HTMLDivElement>(() => {
+    animate('[data-race-card]', {
+      opacity: [0, 1],
+      scale: [0.94, 1],
+      duration: 350,
+      delay: stagger(40, { start: 0 }),
+      ease: 'outQuad',
+    })
+  }, [races.length, year])
+
+  const dragRef = useDraggableStrip<HTMLDivElement>()
 
   return (
-    <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto py-6 [scrollbar-color:var(--color-graphite)_transparent]">
-      {races.map((race, i) => (
-        <motion.div
-          key={race.raceId}
-          className="snap-start shrink-0"
-          initial={reduced ? undefined : { opacity: 0, scale: 0.9 }}
-          whileInView={reduced ? undefined : { opacity: 1, scale: 1 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.35, delay: reduced ? 0 : Math.min(i * 0.04, 0.3) }}
-        >
+    <div
+      ref={(el) => {
+        root.current = el
+        dragRef.current = el
+      }}
+      className="flex snap-x snap-mandatory gap-4 overflow-x-auto py-6"
+      style={{ scrollbarColor: 'var(--color-hairline) transparent' }}
+    >
+      {races.map((race) => (
+        <div key={race.raceId} data-race-card className="shrink-0 snap-start">
           <Link
             to={`/races/${year}/${race.round}`}
-            className="flex w-64 flex-col items-center gap-3 border border-graphite bg-carbon p-5 text-center transition-colors hover:border-kerb"
+            onMouseEnter={() => onActivateRace?.(race)}
+            onFocus={() => onActivateRace?.(race)}
+            className={clsx(
+              'flex w-64 flex-col items-center gap-3 border bg-panel p-5 text-center transition-colors',
+              activeRaceId != null && String(activeRaceId) === String(race.raceId)
+                ? 'border-accent'
+                : 'border-hairline hover:border-accent',
+            )}
           >
             <CircuitTrace
               circuitId={race.circuit.circuitId}
               corners={race.circuit.corners ?? race.circuit.numberOfCorners}
+              svg={race.circuit.svg}
               className="h-24 w-24"
-              color="var(--color-smoke)"
+              color="var(--color-dim)"
             />
-            <p className="font-data text-xs text-smoke">
+            <p className="font-data text-xs text-dim">
               {t('season.round')} {race.round} · {formatDate(race.schedule.race.date, locale)}
             </p>
-            <p className="font-display text-base font-bold uppercase leading-tight tracking-tight text-chalk">
+            <p className="font-display text-base font-bold uppercase leading-tight tracking-tight text-readout">
               {race.raceName}
             </p>
             {race.winner && (
-              <p className="truncate text-xs text-smoke">
+              <p className="truncate text-xs text-dim">
                 {t('season.winner')}: {race.winner.name} {race.winner.surname}
               </p>
             )}
           </Link>
-        </motion.div>
+        </div>
       ))}
     </div>
   )

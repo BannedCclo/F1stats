@@ -21,7 +21,7 @@ export default function SeasonJump({ year, onSelect }: SeasonJumpProps) {
       aria-label={t('season.jumpToSeason')}
       value={years.includes(year) ? year : ''}
       onChange={(e) => onSelect(Number(e.target.value))}
-      className="border border-graphite bg-carbon px-2 py-1 font-data text-sm text-chalk hover:border-kerb"
+      className="border border-hairline bg-panel px-2 py-1 font-data text-sm text-readout hover:border-accent"
     >
       {!years.includes(year) && <option value={year}>{year}</option>}
       {years.map((y) => (

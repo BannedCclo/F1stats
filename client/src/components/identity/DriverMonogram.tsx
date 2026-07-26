@@ -54,8 +54,8 @@ export default function DriverMonogram({
   return (
     <span
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center border font-display font-extrabold tracking-wide text-chalk ${SIZES[size]} ${className ?? ''}`}
-      style={{ borderColor: color, backgroundColor: `color-mix(in srgb, ${color} 22%, transparent)` }}
+      className={`flex shrink-0 items-center justify-center border font-display font-extrabold tracking-wide text-readout ${SIZES[size]} ${className ?? ''}`}
+      style={{ borderColor: color, backgroundColor: `color-mix(in srgb, ${color} 26%, var(--color-panel))` }}
     >
       {code}
     </span>

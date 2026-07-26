@@ -7,6 +7,7 @@ import { dedupeDrivers } from '@/domain/driverAliases'
 import type {
   RawCircuitsResponse,
   RawCircuitDetailResponse,
+  RawCompareResponse,
   RawDriverByIdResponse,
   RawDriverClassificationsResponse,
   RawDriversResponse,
@@ -17,6 +18,7 @@ import type {
   RawStandingsResponse,
   RawTeamClassificationsResponse,
   RawTeamDetailResponse,
+  RawTeamDriversResponse,
   RawTeamsResponse,
 } from './types'
 
@@ -252,6 +254,16 @@ export function useTeamClassifications(teamId: string | undefined) {
   })
 }
 
+/** This team's driver lineup for one season — the roster, not just the constructor's own record. */
+export function useTeamDrivers(year: YearParam, teamId: string | undefined) {
+  return useQuery({
+    queryKey: ['team-drivers', year, teamId],
+    queryFn: () => apiGet<RawTeamDriversResponse>(endpoints.teamDrivers(year, teamId!)),
+    enabled: !!teamId,
+    staleTime: yearStaleTime(year),
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Circuits
 // ---------------------------------------------------------------------------
@@ -278,5 +290,20 @@ export function useCircuit(circuitId: string | undefined) {
     queryFn: () => apiGet<RawCircuitDetailResponse>(endpoints.circuit(circuitId!)),
     enabled: !!circuitId,
     staleTime: Infinity,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Head-to-head
+// ---------------------------------------------------------------------------
+
+/** Head-to-head stats between two drivers, scoped to their shared results within one season. */
+export function useCompare(year: number, driverId1: string | undefined, driverId2: string | undefined) {
+  return useQuery({
+    queryKey: ['compare', year, driverId1, driverId2],
+    queryFn: () => apiGet<RawCompareResponse>(endpoints.compare(year, driverId1!, driverId2!)),
+    enabled: !!driverId1 && !!driverId2 && driverId1 !== driverId2,
+    staleTime: yearStaleTime(year),
+    ...NO_RETRY_ON_FUTURE,
   })
 }

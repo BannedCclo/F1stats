@@ -17,6 +17,7 @@ import TimingTower from '@/components/timing/TimingTower'
 import CircuitTrace from '@/components/circuit/CircuitTrace'
 import KerbDivider from '@/components/ui/KerbDivider'
 import QueryStatus from '@/components/ui/QueryStatus'
+import { useStatusStrip } from '@/components/layout/useStatusStrip'
 
 function SessionPanel({ year, round, kind }: { year: number; round: number; kind: SessionKind }) {
   const isFp = kind === 'fp1' || kind === 'fp2' || kind === 'fp3'
@@ -47,6 +48,10 @@ function SessionPanel({ year, round, kind }: { year: number; round: number; kind
   else if (isSprintRace && races?.sprintRaceResults) items = sprintRaceResultsToTimingItems(races.sprintRaceResults)
 
   return (
+    // Switching tabs changes the item set entirely (different drivers may be
+    // classified, different order) — TimingTower's own id-set comparison
+    // (see components/timing/TimingTower.tsx) tells a real reorder apart from
+    // this kind of wholesale replacement, so rows never fly in from nowhere.
     <QueryStatus isLoading={active.isLoading} error={active.error} isEmpty={items.length === 0}>
       <TimingTower items={items} />
     </QueryStatus>
@@ -64,30 +69,35 @@ export default function RaceDetail() {
 
   const [session, setSession] = useState<SessionKind>('race')
 
+  useStatusStrip(
+    race ? `${t('season.round')} ${race.round} · ${race.circuit.circuitName} · ${year}` : null,
+  )
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+    <div className="mx-auto max-w-[1600px] px-4 py-16 sm:px-6">
       <QueryStatus isLoading={raceQuery.isLoading} error={raceQuery.error} skeletonRows={2}>
         {race && (
-          <div className="grid grid-cols-1 items-center gap-8 sm:grid-cols-[1fr_auto]">
+          <div className="flex flex-col items-start gap-8 sm:flex-row sm:items-center">
             <div>
-              <p className="font-data text-sm text-smoke">
+              <p className="font-data text-sm text-dim">
                 {t('season.round')} {race.round} · {year}
               </p>
-              <h1 className="mt-1 font-display text-4xl font-extrabold uppercase tracking-tight text-chalk sm:text-5xl">
+              <h1 className="display-wide mt-1 font-display text-4xl font-extrabold uppercase tracking-tight text-readout sm:text-5xl">
                 {race.raceName}
               </h1>
-              <p className="mt-2 text-sm text-smoke">
+              <p className="mt-2 text-sm text-dim">
                 {race.circuit.circuitName}, {race.circuit.city} · {formatCircuitLength(race.circuit.circuitLength)} ·{' '}
                 {race.circuit.corners ?? race.circuit.numberOfCorners} {t('circuit.corners').toLowerCase()}
               </p>
-              <p className="mt-1 font-data text-xs text-smoke">
+              <p className="mt-1 font-data text-xs text-dim">
                 {formatDateTime(race.schedule.race.date, race.schedule.race.time, locale)}
               </p>
             </div>
             <CircuitTrace
               circuitId={race.circuit.circuitId}
               corners={race.circuit.corners ?? race.circuit.numberOfCorners}
-              className="h-36 w-36 sm:h-44 sm:w-44"
+              svg={race.circuit.svg}
+              className="h-36 w-36 shrink-0 sm:h-44 sm:w-44"
               animateOnScroll
             />
           </div>
@@ -96,7 +106,7 @@ export default function RaceDetail() {
 
       <KerbDivider className="my-8" />
 
-      <div className="flex flex-wrap gap-1 border-b border-graphite">
+      <div className="flex flex-wrap gap-1 border-b border-hairline">
         {SESSION_CATALOG.filter((s) => !race || isSessionScheduled(race.schedule, s.kind)).map((s) => (
           <button
             key={s.kind}
@@ -104,7 +114,7 @@ export default function RaceDetail() {
             onClick={() => setSession(s.kind)}
             className={clsx(
               'border-b-2 px-3 py-2 font-display text-sm font-bold uppercase tracking-wide transition-colors',
-              session === s.kind ? 'border-kerb text-kerb' : 'border-transparent text-smoke hover:text-chalk',
+              session === s.kind ? 'border-accent text-readout' : 'border-transparent text-dim hover:text-readout',
             )}
           >
             {t(s.labelKey)}
@@ -119,8 +129,8 @@ export default function RaceDetail() {
       </div>
 
       {race?.fast_lap?.fast_lap && (
-        <p className="mt-6 font-data text-xs text-smoke">
-          {t('table.fastestLap')}: {formatLapTime(race.fast_lap.fast_lap)}
+        <p className="mt-6 font-data text-xs text-dim">
+          {t('table.fastestLap')}: <span className="text-fastest emissive">{formatLapTime(race.fast_lap.fast_lap)}</span>
         </p>
       )}
     </div>

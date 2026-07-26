@@ -64,6 +64,8 @@ export interface RawCircuit {
   fastestLapTeamId: string | null
   fastestLapYear: number | null
   url: string
+  /** The real track outline, when this circuit has been curated server-side. Null for the rest of the archive. */
+  svg?: { path: string; viewBox: string } | null
 }
 
 export interface RawChampionship {
@@ -206,6 +208,69 @@ export interface RawTeamClassificationsResponse {
   teamId: string
   total: number
   classifications: RawTeamSeasonClassification[]
+}
+
+export interface RawTeamLineupDriver {
+  driverId: string
+  name: string
+  surname: string
+  nationality: string | null
+  birthday: string
+  number: number | null
+  shortName: string | null
+  url: string | null
+  points: number | null
+  position: number | null
+  wins: number | null
+}
+
+/** `/current/teams/:id/drivers` and `/:year/teams/:id/drivers` — this team's driver lineup for one season. */
+export interface RawTeamDriversResponse {
+  api: string
+  url: string
+  total: number
+  season: number
+  teamId: string
+  team: RawTeam
+  drivers: { driver: RawTeamLineupDriver }[]
+}
+
+export interface RawCompareDriverInfo {
+  driverId1?: string
+  driverId2?: string
+  name: string
+  surname: string
+  nationality: string
+  birthday: string
+  number: number | null
+  shortName: string | null
+  url: string | null
+  teamId: string | null
+}
+
+/** Head-to-head stats, scoped to the two drivers' shared results within one season. */
+export interface RawCompareResponse {
+  api: string
+  url: string
+  season: number | string
+  championshipId: string
+  drivers: RawCompareDriverInfo[]
+  comparison: {
+    totalRaces: number
+    championship: {
+      totalPoints: Record<string, number | null>
+      position: Record<string, number | null>
+    }
+    raceComparison: Record<string, number>
+    qualifyingComparison: Record<string, number>
+    wins: Record<string, number | null>
+    podiums: Record<string, number | null>
+    poles: Record<string, number | null>
+    pointFinishes: Record<string, number>
+    bestRaceFinish: Record<string, number>
+    bestGridPosition: Record<string, number>
+    dnfs: Record<string, number>
+  }
 }
 
 export interface RawStandingItem {

@@ -29,7 +29,7 @@ export default function SearchField({ value, onChange, autoFocus }: SearchFieldP
       onChange={(e) => setLocal(e.target.value)}
       placeholder={t('search.placeholder')}
       autoFocus={autoFocus}
-      className="w-full border border-graphite bg-carbon px-4 py-3 font-body text-chalk placeholder:text-smoke focus:border-kerb"
+      className="w-full border border-hairline bg-panel px-4 py-3 font-body text-readout placeholder:text-dim focus:border-accent"
     />
   )
 }

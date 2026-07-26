@@ -45,21 +45,21 @@ export default function QueryStatus({ isLoading, error, isEmpty, skeletonRows = 
     return (
       <div>
         <Skeleton rows={skeletonRows} />
-        {slow && <p className="mt-3 text-center font-data text-xs text-smoke">{t('status.slowNotice')}</p>}
+        {slow && <p className="mt-3 text-center font-data text-xs text-dim">{t('status.slowNotice')}</p>}
       </div>
     )
   }
 
   if (error instanceof NotYetAvailableError) {
-    return <p className="px-3 py-8 text-center text-sm text-smoke">{t('status.futureRound')}</p>
+    return <p className="px-3 py-8 text-center text-sm text-dim">{t('status.futureRound')}</p>
   }
 
   if (error) {
-    return <p className="px-3 py-8 text-center text-sm text-kerb">{t('status.error')}</p>
+    return <p className="px-3 py-8 text-center text-sm text-rosso">{t('status.error')}</p>
   }
 
   if (isEmpty) {
-    return <p className="px-3 py-8 text-center text-sm text-smoke">{t('status.empty')}</p>
+    return <p className="px-3 py-8 text-center text-sm text-dim">{t('status.empty')}</p>
   }
 
   return <>{children}</>

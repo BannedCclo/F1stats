@@ -23,18 +23,18 @@ export default function Pagination({ offset, limit, itemCount, onOffsetChange }:
         type="button"
         disabled={!hasPrevious}
         onClick={() => onOffsetChange(Math.max(0, offset - limit))}
-        className="border border-graphite px-3 py-1.5 uppercase tracking-wide text-smoke transition-colors hover:enabled:border-kerb hover:enabled:text-chalk disabled:opacity-30"
+        className="border border-hairline bg-panel px-3 py-1.5 uppercase tracking-wide text-dim transition-colors hover:enabled:border-accent hover:enabled:text-readout disabled:opacity-30"
       >
         {t('pagination.previous')}
       </button>
-      <span className="text-smoke">
+      <span className="tabular-nums text-dim">
         {t('pagination.page')} {page}
       </span>
       <button
         type="button"
         disabled={!hasNext}
         onClick={() => onOffsetChange(offset + limit)}
-        className="border border-graphite px-3 py-1.5 uppercase tracking-wide text-smoke transition-colors hover:enabled:border-kerb hover:enabled:text-chalk disabled:opacity-30"
+        className="border border-hairline bg-panel px-3 py-1.5 uppercase tracking-wide text-dim transition-colors hover:enabled:border-accent hover:enabled:text-readout disabled:opacity-30"
       >
         {t('pagination.next')}
       </button>

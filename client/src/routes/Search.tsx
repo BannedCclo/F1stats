@@ -27,28 +27,30 @@ export default function Search() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-      <h1 className="font-display text-4xl font-extrabold uppercase tracking-tight text-chalk">{t('nav.search')}</h1>
+      <h1 className="display-wide font-display text-4xl font-extrabold uppercase tracking-tight text-readout">
+        {t('nav.search')}
+      </h1>
 
       <div className="mt-6">
         <SearchField value={query} onChange={setQuery} autoFocus />
       </div>
 
-      {!hasQuery && <p className="mt-8 text-sm text-smoke">{t('search.prompt')}</p>}
+      {!hasQuery && <p className="mt-8 text-sm text-dim">{t('search.prompt')}</p>}
 
-      {hasQuery && !isLoading && !hasResults && <p className="mt-8 text-sm text-smoke">{t('search.noResults')}</p>}
+      {hasQuery && !isLoading && !hasResults && <p className="mt-8 text-sm text-dim">{t('search.noResults')}</p>}
 
       {drivers.length > 0 && (
         <section className="mt-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-smoke">{t('search.drivers')}</h2>
+          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-dim">{t('search.drivers')}</h2>
           <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {drivers.map((d) => (
               <li key={d.driverId}>
                 <Link
                   to={`/drivers/${d.driverId}`}
-                  className="flex items-center gap-3 border border-graphite bg-carbon p-3 hover:border-kerb"
+                  className="flex items-center gap-3 border border-hairline bg-panel p-3 hover:border-accent"
                 >
                   <DriverMonogram shortName={d.shortName} surname={d.surname} wikipediaUrl={d.url} />
-                  <span className="text-sm text-chalk">
+                  <span className="text-sm text-readout">
                     {d.name} {d.surname}
                   </span>
                 </Link>
@@ -60,16 +62,16 @@ export default function Search() {
 
       {teams.length > 0 && (
         <section className="mt-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-smoke">{t('search.teams')}</h2>
+          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-dim">{t('search.teams')}</h2>
           <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {teams.map((team) => (
               <li key={team.teamId}>
                 <Link
                   to={`/teams/${team.teamId}`}
-                  className="flex items-center gap-3 border border-graphite bg-carbon p-3 hover:border-kerb"
+                  className="flex items-center gap-3 border border-hairline bg-panel p-3 hover:border-accent"
                 >
                   <TeamBar teamId={team.teamId} teamName={team.teamName} />
-                  <span className="text-sm text-chalk">{team.teamName}</span>
+                  <span className="text-sm text-readout">{team.teamName}</span>
                 </Link>
               </li>
             ))}
@@ -79,7 +81,7 @@ export default function Search() {
 
       {circuits.length > 0 && (
         <section className="mt-8">
-          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-smoke">
+          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-dim">
             {t('search.circuits')}
           </h2>
           <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -87,15 +89,16 @@ export default function Search() {
               <li key={c.circuitId}>
                 <Link
                   to={`/circuits/${c.circuitId}`}
-                  className="flex items-center gap-3 border border-graphite bg-carbon p-3 hover:border-kerb"
+                  className="flex items-center gap-3 border border-hairline bg-panel p-3 hover:border-accent"
                 >
                   <CircuitTrace
                     circuitId={c.circuitId}
                     corners={c.corners ?? c.numberOfCorners}
+                    svg={c.svg}
                     className="h-10 w-10 shrink-0"
-                    color="var(--color-smoke)"
+                    color="var(--color-dim)"
                   />
-                  <span className="text-sm text-chalk">{c.circuitName}</span>
+                  <span className="text-sm text-readout">{c.circuitName}</span>
                 </Link>
               </li>
             ))}

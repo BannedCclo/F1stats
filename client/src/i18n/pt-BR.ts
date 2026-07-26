@@ -6,6 +6,8 @@ const ptBR: Dictionary = {
     tagline: 'Todo piloto. Toda equipe. Toda volta.',
   },
   nav: {
+    primary: 'Principal',
+    skipToContent: 'Pular para o conteúdo',
     home: 'Início',
     seasons: 'Temporadas',
     standings: 'Classificação',
@@ -87,6 +89,28 @@ const ptBR: Dictionary = {
     driversChampionships: 'Títulos de pilotos',
     resultsBySeason: 'Resultados por temporada',
     racesEntered: 'Corridas disputadas',
+    currentLineup: 'Escalação atual',
+  },
+  compare: {
+    title: 'Confronto direto',
+    vs: 'vs',
+    totalRaces: 'Corridas juntos',
+    points: 'Pontos no campeonato',
+    raceWins: 'Vitórias em corrida',
+    qualyWins: 'Vitórias na classificação',
+    podiums: 'Pódios',
+    poles: 'Poles',
+    pointFinishes: 'Corridas pontuando',
+    bestFinish: 'Melhor resultado',
+    bestGrid: 'Melhor grid',
+    dnfs: 'Abandonos',
+  },
+  startLights: {
+    skipHint: 'Pressione qualquer tecla para pular',
+  },
+  statusStrip: {
+    round: 'Etapa',
+    leader: 'Líder',
   },
   circuit: {
     country: 'País',
@@ -105,6 +129,8 @@ const ptBR: Dictionary = {
     winner: 'Vencedor',
     races: 'corridas',
     jumpToSeason: 'Ir para temporada',
+    dragHint: 'Arraste para navegar',
+    viewDetails: 'Ver detalhes da temporada',
   },
   search: {
     placeholder: 'Buscar pilotos, equipes, circuitos…',
@@ -113,6 +139,7 @@ const ptBR: Dictionary = {
     circuits: 'Circuitos',
     noResults: 'Nenhum resultado encontrado.',
     prompt: 'Comece a digitar para buscar.',
+    paletteHint: 'Pressione ⌘K para buscar',
   },
   status: {
     loading: 'Carregando…',
@@ -120,7 +147,7 @@ const ptBR: Dictionary = {
     retry: 'Tentar novamente',
     empty: 'Nenhum dado disponível.',
     futureRound: 'Esta etapa ainda não aconteceu — volte após a corrida.',
-    slowNotice: 'A fonte de dados da F1 está demorando para responder — isso é do lado dela, não deste site.',
+    slowNotice: 'Ainda carregando — esta consulta vai fundo no arquivo.',
   },
   pagination: {
     previous: 'Anterior',
@@ -131,6 +158,7 @@ const ptBR: Dictionary = {
     title: 'Fora da pista',
     body: 'Essa página não existe. Vamos te levar de volta ao grid.',
     cta: 'Voltar ao início',
+    radio: 'Box, box, box.',
   },
   language: {
     label: 'Idioma',

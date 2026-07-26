@@ -1,6 +1,8 @@
 export interface Dictionary {
   brand: { name: string; tagline: string }
   nav: {
+    primary: string
+    skipToContent: string
     home: string
     seasons: string
     standings: string
@@ -82,6 +84,28 @@ export interface Dictionary {
     driversChampionships: string
     resultsBySeason: string
     racesEntered: string
+    currentLineup: string
+  }
+  compare: {
+    title: string
+    vs: string
+    totalRaces: string
+    points: string
+    raceWins: string
+    qualyWins: string
+    podiums: string
+    poles: string
+    pointFinishes: string
+    bestFinish: string
+    bestGrid: string
+    dnfs: string
+  }
+  startLights: {
+    skipHint: string
+  }
+  statusStrip: {
+    round: string
+    leader: string
   }
   circuit: {
     country: string
@@ -100,6 +124,8 @@ export interface Dictionary {
     winner: string
     races: string
     jumpToSeason: string
+    dragHint: string
+    viewDetails: string
   }
   search: {
     placeholder: string
@@ -108,6 +134,7 @@ export interface Dictionary {
     circuits: string
     noResults: string
     prompt: string
+    paletteHint: string
   }
   status: {
     loading: string
@@ -118,7 +145,7 @@ export interface Dictionary {
     slowNotice: string
   }
   pagination: { previous: string; next: string; page: string }
-  notFound: { title: string; body: string; cta: string }
+  notFound: { title: string; body: string; cta: string; radio: string }
   language: { label: string; pt: string; en: string }
 }
 
@@ -128,6 +155,8 @@ const en: Dictionary = {
     tagline: 'Every driver. Every team. Every lap.',
   },
   nav: {
+    primary: 'Primary',
+    skipToContent: 'Skip to content',
     home: 'Home',
     seasons: 'Seasons',
     standings: 'Standings',
@@ -209,6 +238,28 @@ const en: Dictionary = {
     driversChampionships: "Drivers' titles",
     resultsBySeason: 'Results by season',
     racesEntered: 'Races entered',
+    currentLineup: 'Current lineup',
+  },
+  compare: {
+    title: 'Head to head',
+    vs: 'vs',
+    totalRaces: 'Races together',
+    points: 'Championship points',
+    raceWins: 'Race wins',
+    qualyWins: 'Qualifying wins',
+    podiums: 'Podiums',
+    poles: 'Poles',
+    pointFinishes: 'Point finishes',
+    bestFinish: 'Best finish',
+    bestGrid: 'Best grid',
+    dnfs: 'DNFs',
+  },
+  startLights: {
+    skipHint: 'Press any key to skip',
+  },
+  statusStrip: {
+    round: 'Round',
+    leader: 'Leader',
   },
   circuit: {
     country: 'Country',
@@ -227,6 +278,8 @@ const en: Dictionary = {
     winner: 'Winner',
     races: 'races',
     jumpToSeason: 'Jump to season',
+    dragHint: 'Drag to browse',
+    viewDetails: 'View season details',
   },
   search: {
     placeholder: 'Search drivers, teams, circuits…',
@@ -235,6 +288,7 @@ const en: Dictionary = {
     circuits: 'Circuits',
     noResults: 'No results found.',
     prompt: 'Start typing to search.',
+    paletteHint: 'Press ⌘K to search',
   },
   status: {
     loading: 'Loading…',
@@ -242,7 +296,7 @@ const en: Dictionary = {
     retry: 'Try again',
     empty: 'No data available.',
     futureRound: 'This round has not been held yet — check back after the race.',
-    slowNotice: 'The F1 data source is slow to respond — this is on their end, not this app.',
+    slowNotice: 'Still loading — this query reaches deep into the archive.',
   },
   pagination: {
     previous: 'Previous',
@@ -253,6 +307,7 @@ const en: Dictionary = {
     title: 'Off track',
     body: "This page doesn't exist. Let's get you back to the grid.",
     cta: 'Back to home',
+    radio: 'Box, box, box.',
   },
   language: {
     label: 'Language',

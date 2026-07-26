@@ -46,6 +46,7 @@ export interface Circuit {
   fastestLapTeamId: string | null
   fastestLapYear: number | null
   url: string
+  svg: { path: string; viewBox: string } | null
 }
 
 export function normalizeDriver(raw: RawDriver, fallbackId?: string): Driver {
@@ -97,5 +98,6 @@ export function normalizeCircuit(raw: RawCircuit): Circuit {
     fastestLapTeamId: raw.fastestLapTeamId,
     fastestLapYear: raw.fastestLapYear,
     url: raw.url,
+    svg: raw.svg ?? null,
   }
 }

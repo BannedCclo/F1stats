@@ -8,6 +8,8 @@ import DriverMonogram from '@/components/identity/DriverMonogram'
 import CountryFlag from '@/components/identity/CountryFlag'
 import TeamBar from '@/components/identity/TeamBar'
 import Pagination from '@/components/ui/Pagination'
+import { useRevealOnScroll } from '@/motion/useRevealOnScroll'
+import { useStatusStrip } from '@/components/layout/useStatusStrip'
 
 const PAGE_SIZE = 30
 
@@ -107,22 +109,29 @@ export default function Drivers() {
   const blockedOnStats = sortOrFilterNeedsStats && !careerIndex
   const ready = !isLoadingBase && !blockedOnStats
 
-  const selectClass = 'border border-graphite bg-carbon px-2 py-1.5 text-chalk'
+  const selectClass = 'border border-hairline bg-panel px-2 py-1.5 text-readout'
+
+  const gridRef = useRevealOnScroll<HTMLUListElement>(
+    { enabled: ready, selector: '[data-driver-tile]', distance: 10, staggerMs: 16 },
+    [offset, sortBy, country, team, ready],
+  )
+
+  useStatusStrip(ready ? `${filteredSorted.length} ${t('driversPage.resultCount')}` : null)
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="font-display text-4xl font-extrabold uppercase tracking-tight text-chalk">
+    <div className="mx-auto max-w-[1600px] px-4 py-16 sm:px-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <h1 className="display-wide font-display text-4xl font-extrabold uppercase tracking-tight text-readout">
           {t('nav.drivers')}
         </h1>
-        <Link to="/search" className="font-data text-sm text-smoke hover:text-kerb">
+        <Link to="/search" className="font-data text-sm text-dim hover:text-accent">
           {t('nav.search')} →
         </Link>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-4 font-data text-sm">
         <label className="flex items-center gap-2">
-          <span className="text-smoke">{t('driversPage.sortBy')}</span>
+          <span className="text-dim">{t('driversPage.sortBy')}</span>
           <select
             value={sortBy}
             onChange={(e) => updateAndReset(setSortBy, e.target.value as SortKey)}
@@ -137,7 +146,7 @@ export default function Drivers() {
         </label>
 
         <label className="flex items-center gap-2">
-          <span className="text-smoke">{t('driversPage.countryFilter')}</span>
+          <span className="text-dim">{t('driversPage.countryFilter')}</span>
           <select value={country} onChange={(e) => updateAndReset(setCountry, e.target.value)} className={selectClass}>
             <option value="">{t('driversPage.allCountries')}</option>
             {countryOptions.map((c) => (
@@ -149,7 +158,7 @@ export default function Drivers() {
         </label>
 
         <label className="flex items-center gap-2">
-          <span className="text-smoke">{t('driversPage.teamFilter')}</span>
+          <span className="text-dim">{t('driversPage.teamFilter')}</span>
           <select value={team} onChange={(e) => updateAndReset(setTeam, e.target.value)} className={selectClass}>
             <option value="">{t('driversPage.allTeams')}</option>
             {teamOptions.map(([id, name]) => (
@@ -164,23 +173,23 @@ export default function Drivers() {
           <button
             type="button"
             onClick={() => setWantsCareerData(true)}
-            className="border border-graphite px-2 py-1.5 text-smoke hover:border-kerb hover:text-chalk"
+            className="border border-hairline px-2 py-1.5 text-dim hover:border-accent hover:text-readout"
           >
             {t('driversPage.loadLastTeam')}
           </button>
         )}
       </div>
 
-      {isLoadingBase && <p className="mt-6 font-data text-sm text-smoke">{t('driversPage.loadingArchive')}</p>}
+      {isLoadingBase && <p className="mt-6 font-data text-sm text-dim">{t('driversPage.loadingArchive')}</p>}
       {!isLoadingBase && isLoadingStats && (
         <div className="mt-6">
-          <p className="font-data text-sm text-smoke">
+          <p className="font-data text-sm text-dim">
             {t('driversPage.loadingCareerStats')}
             {progress ? ` (${progress.done}/${progress.total})` : ''}
           </p>
-          <div className="mt-2 h-1 w-full max-w-xs border border-graphite">
+          <div className="mt-2 h-1 w-full max-w-xs border border-hairline">
             <div
-              className="h-full bg-kerb transition-[width]"
+              className="h-full bg-accent transition-[width]"
               style={{ width: progress ? `${(100 * progress.done) / progress.total}%` : '0%' }}
             />
           </div>
@@ -188,9 +197,9 @@ export default function Drivers() {
       )}
 
       {ready && failedYears.length > 0 && (
-        <p className="mt-6 font-data text-xs text-kerb">
+        <p className="mt-6 font-data text-xs text-rosso">
           {t('driversPage.someSeasonsFailed').replace('{n}', String(failedYears.length))}{' '}
-          <button type="button" onClick={() => careerQuery.refetch()} className="underline hover:text-chalk">
+          <button type="button" onClick={() => careerQuery.refetch()} className="underline hover:text-readout">
             {t('driversPage.retry')}
           </button>
         </p>
@@ -198,25 +207,25 @@ export default function Drivers() {
 
       {ready && (
         <>
-          <p className="mt-6 font-data text-xs text-smoke">
+          <p className="mt-6 font-data text-xs text-dim">
             {filteredSorted.length} {t('driversPage.resultCount')}
           </p>
-          <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ul ref={gridRef} className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {pageItems.map((d) => {
               const lastTeam = statsFor(d.driverId)?.lastTeamName
               return (
-                <li key={d.driverId}>
+                <li key={d.driverId} data-driver-tile>
                   <Link
                     to={`/drivers/${d.driverId}`}
-                    className="flex items-center gap-3 border border-graphite bg-carbon p-3 transition-colors hover:border-kerb"
+                    className="flex items-center gap-3 border border-hairline bg-panel p-3 transition-colors hover:border-accent"
                   >
                     <DriverMonogram shortName={d.shortName} surname={d.surname} wikipediaUrl={d.url} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm text-chalk">
+                      <span className="block truncate text-sm text-readout">
                         {d.name} {d.surname}
                       </span>
                       {lastTeam && (
-                        <span className="mt-0.5 flex items-center gap-1.5 text-xs text-smoke">
+                        <span className="mt-0.5 flex items-center gap-1.5 text-xs text-dim">
                           <TeamBar teamId={statsFor(d.driverId)?.lastTeamId} teamName={lastTeam} className="h-3" />
                           <span className="truncate">{lastTeam}</span>
                         </span>
