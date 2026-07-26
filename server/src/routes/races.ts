@@ -294,7 +294,7 @@ router.get("/current/next", async (req: Request, res: Response) => {
 
     const championship = championshipData[0]
 
-    const seasonData = await db
+    const candidates = await db
       .select()
       .from(races)
       .innerJoin(circuits, eq(races.circuit, circuits.circuitId))
@@ -306,8 +306,20 @@ router.get("/current/next", async (req: Request, res: Response) => {
           gte(races.raceDate, today)
         )
       )
-      .limit(1)
       .orderBy(asc(races.round))
+
+    // `races.raceDate` alone can't tell a race that's already run today from
+    // one that hasn't started yet — both satisfy `raceDate >= today`. Compare
+    // the full date+time instant instead, so "next race" flips over to the
+    // following round as soon as today's lights go out, not at midnight.
+    const now = new Date()
+    const seasonData = candidates
+      .filter((row) => {
+        if (!row.races.raceDate) return true
+        const instant = new Date(`${row.races.raceDate}T${row.races.raceTime ?? "00:00:00Z"}`)
+        return Number.isNaN(instant.getTime()) || instant >= now
+      })
+      .slice(0, 1)
 
     if (seasonData.length === 0) {
       return apiNotFound(

@@ -9,8 +9,11 @@ import { getQualyResults } from "../lib/scrap/qualy.js"
 import { getRaceResults } from "../lib/scrap/race.js"
 import { getSprintQualyResults } from "../lib/scrap/sprint/qualy.js"
 import { getSprintRaceResults } from "../lib/scrap/sprint/race.js"
+import { MIN_EXPECTED_ROWS } from "../lib/sync/completeness.js"
+import { recomputeDriverStandings, recomputeConstructorStandings } from "../lib/sync/recomputeStandings.js"
 
 const PRACTICE_KEYS = new Set(["fp1", "fp2", "fp3"])
+const STANDINGS_SESSION_KEYS = new Set(["race", "sprintRace"])
 
 function dedupeWork(pending) {
   const work = []
@@ -49,16 +52,34 @@ const browser = await chromium.launch({ headless: true })
 const context = await browser.newContext()
 
 let hadError = false
+const championshipsToRecompute = new Set()
+
 for (const item of work) {
   const page = await context.newPage()
   console.log(`[sync] ${item.raceId} / ${item.sessionKey} (bbc slug: ${item.bbcSlug})`)
   try {
-    await item.run(item.year, item.bbcSlug, item.raceId, page)
+    const count = await item.run(item.year, item.bbcSlug, item.raceId, page)
+    if (STANDINGS_SESSION_KEYS.has(item.sessionKey) && count >= MIN_EXPECTED_ROWS) {
+      championshipsToRecompute.add(`f1_${item.year}`)
+    }
   } catch (error) {
     hadError = true
     console.error(`[sync] ${item.raceId} / ${item.sessionKey} failed:`, error)
   } finally {
     await page.close()
+  }
+}
+
+// Standings depend on every race's results, not just the one just scraped —
+// recompute once per championship touched this run rather than per session.
+for (const championshipId of championshipsToRecompute) {
+  try {
+    const drivers = await recomputeDriverStandings(championshipId)
+    const constructors = await recomputeConstructorStandings(championshipId)
+    console.log(`[sync] ${championshipId}: recomputed standings (${drivers} drivers, ${constructors} constructors)`)
+  } catch (error) {
+    hadError = true
+    console.error(`[sync] ${championshipId} standings recompute failed:`, error)
   }
 }
 
