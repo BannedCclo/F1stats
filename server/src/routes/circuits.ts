@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express"
-import { eq, like, or } from "drizzle-orm"
+import { eq, ilike, or } from "drizzle-orm"
 import { db } from "../../db/index.js"
 import { circuits, races } from "../../db/migrations/schema.js"
 import { SITE_NAME, SITE_URL } from "../lib/constants.js"
@@ -127,9 +127,9 @@ router.get("/circuits/search", async (req: Request, res: Response) => {
       .from(circuits)
       .where(
         or(
-          like(circuits.circuitName, `%${searchParams.get("q") ?? ""}%`),
-          like(circuits.city, `%${searchParams.get("q") ?? ""}%`),
-          like(circuits.country, `%${searchParams.get("q") ?? ""}%`)
+          ilike(circuits.circuitName, `%${searchParams.get("q") ?? ""}%`),
+          ilike(circuits.city, `%${searchParams.get("q") ?? ""}%`),
+          ilike(circuits.country, `%${searchParams.get("q") ?? ""}%`)
         )
       )
       .limit(limit)

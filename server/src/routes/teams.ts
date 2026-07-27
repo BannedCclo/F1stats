@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express"
-import { and, asc, count, eq, InferModel, like } from "drizzle-orm"
+import { and, asc, count, eq, ilike, InferModel } from "drizzle-orm"
 import { db } from "../../db/index.js"
 import {
   championships,
@@ -138,7 +138,7 @@ router.get("/teams/search", async (req: Request, res: Response) => {
     const teamsData = await db
       .select()
       .from(teams)
-      .where(like(teams.teamName, `%${searchParams.get("q") ?? ""}%`))
+      .where(ilike(teams.teamName, `%${searchParams.get("q") ?? ""}%`))
       .limit(limit)
       .offset(offset)
       .orderBy(teams.teamId)

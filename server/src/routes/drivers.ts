@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express"
-import { and, asc, eq, InferModel, like, or } from "drizzle-orm"
+import { and, asc, eq, ilike, InferModel, or } from "drizzle-orm"
 import { db } from "../../db/index.js"
 import {
   championships,
@@ -127,8 +127,8 @@ router.get("/drivers/search", async (req: Request, res: Response) => {
       .from(drivers)
       .where(
         or(
-          like(drivers.surname, `%${searchParams.get("q") ?? ""}%`),
-          like(drivers.name, `%${searchParams.get("q") ?? ""}%`)
+          ilike(drivers.surname, `%${searchParams.get("q") ?? ""}%`),
+          ilike(drivers.name, `%${searchParams.get("q") ?? ""}%`)
         )
       )
       .limit(limit)

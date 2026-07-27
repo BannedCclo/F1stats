@@ -79,7 +79,7 @@ export default function Layout() {
             {t('brand.name')}
           </NavLink>
 
-          <div className="order-3 w-full sm:order-none sm:flex sm:w-full sm:justify-center">
+          <div className="order-3 w-full sm:order-none sm:w-full">
             <HeaderSearch />
           </div>
 

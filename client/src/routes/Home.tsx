@@ -12,6 +12,8 @@ import { useThemeAccent } from '@/motion/useThemeAccent'
 import { useStatusStrip } from '@/components/layout/useStatusStrip'
 import TimingTower from '@/components/timing/TimingTower'
 import CircuitTrace from '@/components/circuit/CircuitTrace'
+import DriverMonogram from '@/components/identity/DriverMonogram'
+import TeamBar from '@/components/identity/TeamBar'
 import KerbDivider from '@/components/ui/KerbDivider'
 import QueryStatus from '@/components/ui/QueryStatus'
 import Reveal from '@/components/ui/Reveal'
@@ -144,16 +146,37 @@ export default function Home() {
         <p className="font-data text-xs uppercase tracking-widest text-dim">{t('home.lastRace')}</p>
         <QueryStatus isLoading={lastRaceQuery.isLoading} error={lastRaceQuery.error} skeletonRows={1}>
           {lastRace && (
-            <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+            <div className="mt-3">
               <h2 className="font-display text-2xl font-bold uppercase tracking-tight text-readout">
                 {lastRace.raceName}
               </h2>
+
               {lastRace.winner && (
                 <Link
                   to={`/drivers/${lastRace.winner.driverId}`}
-                  className="font-data text-sm text-accent hover:underline"
+                  className="group mt-4 flex items-center gap-4 border border-accent/40 bg-panel p-4 transition-colors hover:border-accent sm:p-5"
                 >
-                  🏆 {lastRace.winner.name} {lastRace.winner.surname}
+                  <DriverMonogram
+                    shortName={lastRace.winner.shortName}
+                    surname={lastRace.winner.surname}
+                    teamId={lastRace.teamWinner?.teamId}
+                    wikipediaUrl={lastRace.winner.url}
+                    size="lg"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-data text-[.6875rem] uppercase tracking-[.18em] text-dim">
+                      🏆 {t('season.winner')}
+                    </p>
+                    <p className="mt-0.5 truncate font-display text-2xl font-extrabold uppercase tracking-tight text-accent emissive group-hover:underline sm:text-3xl">
+                      {lastRace.winner.name} {lastRace.winner.surname}
+                    </p>
+                    {lastRace.teamWinner && (
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-dim">
+                        <TeamBar teamId={lastRace.teamWinner.teamId} teamName={lastRace.teamWinner.teamName} />
+                        {lastRace.teamWinner.teamName}
+                      </p>
+                    )}
+                  </div>
                 </Link>
               )}
             </div>

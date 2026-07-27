@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { animate } from 'animejs'
 import { useCircuitSearch, useDriverSearch, useTeamSearch } from '@/api/queries'
@@ -86,7 +87,7 @@ export default function HeaderSearch() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('nav.search')}
-        className="flex w-full items-center justify-between gap-3 border border-hairline bg-panel px-3 py-2 font-body text-sm text-dim transition-colors hover:border-accent sm:max-w-xl"
+        className="flex w-full items-center justify-between gap-3 border border-hairline bg-panel px-3 py-2 font-body text-sm text-dim transition-colors hover:border-accent sm:mx-auto sm:max-w-xl"
       >
         <span>{t('search.placeholder')}</span>
         <kbd className="hidden shrink-0 border border-hairline px-1.5 py-0.5 font-data text-[.6875rem] text-dim sm:inline">
@@ -94,120 +95,122 @@ export default function HeaderSearch() {
         </kbd>
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-carbon/80 px-4 pt-[12vh] backdrop-blur-sm"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setOpen(false)
-          }}
-        >
+      {open &&
+        createPortal(
           <div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('nav.search')}
-            className="w-full max-w-lg border border-hairline bg-panel shadow-[0_0_40px_rgba(0,0,0,0.6)]"
+            className="fixed inset-0 z-50 flex items-start justify-center bg-carbon/80 px-4 pt-[12vh] backdrop-blur-sm"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setOpen(false)
+            }}
           >
-            <input
-              ref={inputRef}
-              type="search"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && active) goToFullSearch()
-              }}
-              placeholder={t('search.placeholder')}
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
               aria-label={t('nav.search')}
-              aria-expanded={active}
-              role="combobox"
-              aria-controls="header-search-results"
-              aria-haspopup="listbox"
-              className="w-full border-b border-hairline bg-transparent px-4 py-3 font-body text-readout placeholder:text-dim focus:outline-none"
-            />
+              className="w-full max-w-lg border border-hairline bg-panel shadow-[0_0_40px_rgba(0,0,0,0.6)]"
+            >
+              <input
+                ref={inputRef}
+                type="search"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && active) goToFullSearch()
+                }}
+                placeholder={t('search.placeholder')}
+                aria-label={t('nav.search')}
+                aria-expanded={active}
+                role="combobox"
+                aria-controls="header-search-results"
+                aria-haspopup="listbox"
+                className="w-full border-b border-hairline bg-transparent px-4 py-3 font-body text-readout placeholder:text-dim focus:outline-none"
+              />
 
-            {active && (
-              <div id="header-search-results" role="listbox" className="max-h-[60vh] overflow-y-auto">
-                {!hasResults && <p className="px-4 py-4 text-center text-sm text-dim">{t('search.noResults')}</p>}
+              {active && (
+                <div id="header-search-results" role="listbox" className="max-h-[60vh] overflow-y-auto">
+                  {!hasResults && <p className="px-4 py-4 text-center text-sm text-dim">{t('search.noResults')}</p>}
 
-                {drivers.length > 0 && (
-                  <div>
-                    <p className="px-3 pt-3 font-display text-xs font-bold uppercase tracking-wide text-dim">
-                      {t('search.drivers')}
-                    </p>
-                    {drivers.map((d) => (
-                      <Link
-                        key={d.driverId}
-                        to={`/drivers/${d.driverId}`}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-bezel"
-                      >
-                        <DriverMonogram shortName={d.shortName} surname={d.surname} wikipediaUrl={d.url} size="sm" />
-                        <span className="text-sm text-readout">
-                          {d.name} {d.surname}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  {drivers.length > 0 && (
+                    <div>
+                      <p className="px-3 pt-3 font-display text-xs font-bold uppercase tracking-wide text-dim">
+                        {t('search.drivers')}
+                      </p>
+                      {drivers.map((d) => (
+                        <Link
+                          key={d.driverId}
+                          to={`/drivers/${d.driverId}`}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-bezel"
+                        >
+                          <DriverMonogram shortName={d.shortName} surname={d.surname} wikipediaUrl={d.url} size="sm" />
+                          <span className="text-sm text-readout">
+                            {d.name} {d.surname}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
 
-                {teams.length > 0 && (
-                  <div>
-                    <p className="px-3 pt-3 font-display text-xs font-bold uppercase tracking-wide text-dim">
-                      {t('search.teams')}
-                    </p>
-                    {teams.map((team) => (
-                      <Link
-                        key={team.teamId}
-                        to={`/teams/${team.teamId}`}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-bezel"
-                      >
-                        <TeamBar teamId={team.teamId} teamName={team.teamName} />
-                        <span className="text-sm text-readout">{team.teamName}</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  {teams.length > 0 && (
+                    <div>
+                      <p className="px-3 pt-3 font-display text-xs font-bold uppercase tracking-wide text-dim">
+                        {t('search.teams')}
+                      </p>
+                      {teams.map((team) => (
+                        <Link
+                          key={team.teamId}
+                          to={`/teams/${team.teamId}`}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-bezel"
+                        >
+                          <TeamBar teamId={team.teamId} teamName={team.teamName} />
+                          <span className="text-sm text-readout">{team.teamName}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
 
-                {circuits.length > 0 && (
-                  <div>
-                    <p className="px-3 pt-3 font-display text-xs font-bold uppercase tracking-wide text-dim">
-                      {t('search.circuits')}
-                    </p>
-                    {circuits.map((c) => (
-                      <Link
-                        key={c.circuitId}
-                        to={`/circuits/${c.circuitId}`}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-bezel"
-                      >
-                        <CircuitTrace
-                          circuitId={c.circuitId}
-                          corners={c.corners ?? c.numberOfCorners}
-                          svg={c.svg}
-                          className="h-8 w-8 shrink-0"
-                          color="var(--color-dim)"
-                        />
-                        <span className="text-sm text-readout">{c.circuitName}</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  {circuits.length > 0 && (
+                    <div>
+                      <p className="px-3 pt-3 font-display text-xs font-bold uppercase tracking-wide text-dim">
+                        {t('search.circuits')}
+                      </p>
+                      {circuits.map((c) => (
+                        <Link
+                          key={c.circuitId}
+                          to={`/circuits/${c.circuitId}`}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-bezel"
+                        >
+                          <CircuitTrace
+                            circuitId={c.circuitId}
+                            corners={c.corners ?? c.numberOfCorners}
+                            svg={c.svg}
+                            className="h-8 w-8 shrink-0"
+                            color="var(--color-dim)"
+                          />
+                          <span className="text-sm text-readout">{c.circuitName}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
 
-                {hasResults && (
-                  <button
-                    type="button"
-                    onClick={goToFullSearch}
-                    className="block w-full border-t border-hairline px-3 py-2.5 text-center font-data text-xs uppercase tracking-wide text-dim hover:text-accent"
-                  >
-                    {t('nav.search')} →
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                  {hasResults && (
+                    <button
+                      type="button"
+                      onClick={goToFullSearch}
+                      className="block w-full border-t border-hairline px-3 py-2.5 text-center font-data text-xs uppercase tracking-wide text-dim hover:text-accent"
+                    >
+                      {t('nav.search')} →
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   )
 }
