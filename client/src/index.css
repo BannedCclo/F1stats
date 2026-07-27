@@ -175,13 +175,16 @@ body {
    tracks the readout/dim tone in both themes without a separate light-mode
    override. Reduced-motion block above already crushes the animation. */
 .signature-svg {
-  width: 100%;
+  /* Width comes from the className the caller passes (e.g. Tailwind w-20) —
+     this rule must not set it, or it fights the utility class for the same
+     specificity and wins on source order alone, blowing the signature up to
+     its raw 816px viewBox size. */
   height: auto;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
   filter:
     drop-shadow(0 0 2px color-mix(in oklab, currentColor 70%, transparent))
-    drop-shadow(0 0 10px color-mix(in oklab, currentColor 45%, transparent));
+    drop-shadow(0 0 8px color-mix(in oklab, currentColor 40%, transparent));
 }
 
 .signature-svg.animate {
