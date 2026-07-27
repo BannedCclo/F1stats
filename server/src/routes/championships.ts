@@ -7,7 +7,8 @@ import {
   drivers,
   teams,
 } from "../../db/migrations/schema.js"
-import { CURRENT_YEAR, SITE_NAME, SITE_URL } from "../lib/constants.js"
+import { SITE_NAME, SITE_URL } from "../lib/constants.js"
+import { getCurrentYear } from "../lib/currentYear.js"
 import { BaseApiResponse } from "../lib/definitions.js"
 import { apiNotFound, getLimitAndOffset } from "../lib/utils.js"
 
@@ -36,7 +37,7 @@ router.get(
     const searchParams = new URL(fullUrl).searchParams
     const { limit, offset } = getLimitAndOffset(searchParams)
     try {
-      const year = CURRENT_YEAR
+      const year = await getCurrentYear()
       const driverStandings = await db
         .select()
         .from(driverClassifications)
@@ -119,7 +120,7 @@ router.get(
     const searchParams = new URL(fullUrl).searchParams
     const { limit, offset } = getLimitAndOffset(searchParams)
     try {
-      const year = CURRENT_YEAR
+      const year = await getCurrentYear()
       const teamStandingsData = await db
         .select()
         .from(constructorsClassifications)

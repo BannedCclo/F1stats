@@ -54,16 +54,17 @@ export const updateDriversChampionship = async (year, page) => {
     return data
   })
 
-  const formattedResults = standings.map((result) => {
-    return {
+  const formattedResults = []
+  for (const result of standings) {
+    formattedResults.push({
       Championship_ID: `f1_${year}`,
       Driver_ID: formatDriver(result.driver),
-      Team_ID: formatTeam(result.team),
+      Team_ID: await formatTeam(result.team, result.driver),
       Points: parseInt(result.points),
       Position: parseInt(result.position),
       wins: result.wins == 0 ? null : parseInt(result.wins),
-    }
-  })
+    })
+  }
 
   console.log(formattedResults)
   ;(async () => {

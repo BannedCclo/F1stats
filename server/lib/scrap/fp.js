@@ -77,7 +77,7 @@ export const getPracticeResults = async (year, race, raceId, page) => {
           args: {
             Driver_ID: formatDriver(result.driver),
             Race_ID: raceId,
-            Team_ID: formatTeam(result.team),
+            Team_ID: await formatTeam(result.team, result.driver),
             Time: result.time,
           },
         })

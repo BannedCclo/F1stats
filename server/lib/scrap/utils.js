@@ -1,3 +1,5 @@
+import { clientWriter } from "../db.js"
+
 export const generateRaceId = (race, year) => {
   return `${race}_${year}`
 }
@@ -16,106 +18,6 @@ export const toFloatOrNull = (value) => {
   const n = parseFloat(value)
   return Number.isNaN(n) ? null : n
 }
-
-// object array with the info of the current grid of the f1, includes drivers and his teams
-export const grid = [
-  {
-    driver: "verstappen",
-    team: "red_bull",
-  },
-  {
-    driver: "lawson",
-    team: "rb",
-  },
-  {
-    driver: "hamilton",
-    team: "ferrari",
-  },
-  {
-    driver: "russell",
-    team: "mercedes",
-  },
-  {
-    driver: "sainz",
-    team: "williams",
-  },
-  {
-    driver: "leclerc",
-    team: "ferrari",
-  },
-  {
-    driver: "norris",
-    team: "mclaren",
-  },
-  {
-    driver: "piastri",
-    team: "mclaren",
-  },
-  {
-    driver: "bortoleto",
-    team: "audi",
-  },
-  {
-    driver: "hulkenberg",
-    team: "audi",
-  },
-  {
-    driver: "sainz",
-    team: "williams",
-  },
-  {
-    driver: "albon",
-    team: "williams",
-  },
-  {
-    driver: "alonso",
-    team: "aston_martin",
-  },
-  {
-    driver: "stroll",
-    team: "aston_martin",
-  },
-  {
-    driver: "ocon",
-    team: "haas",
-  },
-  {
-    driver: "bearman",
-    team: "haas",
-  },
-  {
-    driver: "colapinto",
-    team: "alpine",
-  },
-  {
-    driver: "gasly",
-    team: "alpine",
-  },
-  {
-    driver: "hadjar",
-    team: "red_bull",
-  },
-  {
-    driver: "perez",
-    team: "cadillac",
-  },
-  {
-    driver: "bottas",
-    team: "cadillac",
-  },
-  {
-    driver: "lindblad",
-    team: "rb",
-  },
-  {
-    driver: "oward",
-    team: "mclaren",
-  },
-  {
-    driver: "crawford",
-    team: "aston_martin",
-  },
-]
 
 export const exceptions = ["max verstappen", "kevin magnussen"]
 export const teamExceptions = ["red bull", "aston martin"]
@@ -144,32 +46,46 @@ export const formatDriver = (driver) => {
   }
 }
 
-export const formatTeam = (team, driver = null) => {
-  let teamId
+// The driver's team for whichever season is most recent in our own data —
+// replaces a hardcoded driver->team array that needed a manual edit every
+// time a driver or team changed. Looked up by driverId (see formatDriver),
+// which is season-agnostic and stable across a driver's whole career, so
+// this stays correct without any per-season maintenance once the
+// season-entities sync (lib/sync/seasonEntities.js) has populated this
+// year's driver_classifications.
+async function currentTeamForDriver(driverId) {
+  const { rows } = await clientWriter.execute({
+    sql: `
+      SELECT dc.team_id AS team_id
+      FROM driver_classifications dc
+      JOIN championships c ON c.championship_id = dc.championship_id
+      WHERE dc.driver_id = :driver_id AND dc.team_id IS NOT NULL
+      ORDER BY c.year DESC
+      LIMIT 1`,
+    args: { driver_id: driverId },
+  })
+  return rows[0]?.team_id ?? null
+}
+
+export const formatTeam = async (team, driver = null) => {
   const formattedTeam = team?.trim().toLowerCase() || ""
-  // Find the driver in the grid array
+
   if (driver) {
-    // Handle driver exceptions
-    const formattedDriver = exceptions.includes(driver)
-      ? driver.replace(" ", "_")
-      : driver
-
-    // Find the driver in the grid array
-    const driverEntry = grid.find((entry) => entry.driver === formattedDriver)
-
-    // If a matching driver is found, use their team; otherwise, proceed with normal logic
-    if (driverEntry) {
-      return (teamId = driverEntry.team)
-    }
+    const teamId = await currentTeamForDriver(formatDriver(driver))
+    if (teamId) return teamId
   }
 
-  // Default logic if driver is not provided or not found in the grid
+  // Fall back to parsing BBC's own team-name text — reached when there's no
+  // driver to look up (or the driver isn't in our data yet, e.g. their very
+  // first classification row hasn't landed). Team names change rarely
+  // enough that this short exception list isn't the maintenance burden the
+  // driver grid was.
   if (formattedTeam === "bulls" || formattedTeam === "racing bulls") {
-    return (teamId = "rb")
+    return "rb"
   } else if (teamExceptions.includes(formattedTeam)) {
-    return (teamId = formattedTeam.replace(" ", "_"))
+    return formattedTeam.replace(" ", "_")
   } else {
-    teamId = formattedTeam.split(" ").pop()
+    const teamId = formattedTeam.split(" ").pop()
     return teamId === "bulls" ? "rb" : teamId
   }
 }

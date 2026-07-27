@@ -61,38 +61,36 @@ export const getRaceResults = async (year, race, raceId, page) => {
     return results.length
   }
 
-  const formattedResults = results.map((result) => {
-    return {
+  const formattedResults = []
+  for (const result of results) {
+    formattedResults.push({
       Race_ID: raceId,
       Driver_ID: formatDriver(result.driver),
-      Team_ID: formatTeam(result.team),
+      Team_ID: await formatTeam(result.team, result.driver),
       Finishing_Position: toIntOrNull(result.position),
       Grid_Position: toIntOrNull(result.gridPosition),
       Race_Time: result.raceTime,
       Points_Obtained: toFloatOrNull(result.points),
       fast_lap: result.lapTime,
-    }
-  })
+    })
+  }
 
   // we want to retrieve the fastest overall lap of the race
 
-  const fastestLap = results.reduce(
-    (acc, result) => {
-      // Check if the lapTime exists and is a valid lap time
-      if (result.lapTime) {
-        const lapTime = result.lapTime
+  const fastestLap = { lapTime: null, driverId: null, teamId: null }
+  for (const result of results) {
+    // Check if the lapTime exists and is a valid lap time
+    if (result.lapTime) {
+      const lapTime = result.lapTime
 
-        // Compare lap time only if it's the fastest one
-        if (!acc.lapTime || lapTime < acc.lapTime) {
-          acc.lapTime = lapTime
-          acc.driverId = formatDriver(result.driver)
-          acc.teamId = formatTeam(result.team)
-        }
+      // Compare lap time only if it's the fastest one
+      if (!fastestLap.lapTime || lapTime < fastestLap.lapTime) {
+        fastestLap.lapTime = lapTime
+        fastestLap.driverId = formatDriver(result.driver)
+        fastestLap.teamId = await formatTeam(result.team, result.driver)
       }
-      return acc
-    },
-    { lapTime: null, driverId: null, teamId: null },
-  )
+    }
+  }
 
   console.log(formattedResults)
   console.log(fastestLap)

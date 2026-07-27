@@ -68,15 +68,18 @@ export const getSprintQualyResults = async (year, race, raceId, page) => {
     return results.length
   }
 
-  const formattedResults = results.map((result) => ({
-    Race_ID: raceId,
-    Driver_ID: formatDriver(result.driver),
-    Team_ID: formatTeam(result.team, result.driver),
-    Grid_Position: toIntOrNull(result.gridPosition),
-    SQ1: result.q1,
-    SQ2: result.q2,
-    SQ3: result.q3,
-  }))
+  const formattedResults = []
+  for (const result of results) {
+    formattedResults.push({
+      Race_ID: raceId,
+      Driver_ID: formatDriver(result.driver),
+      Team_ID: await formatTeam(result.team, result.driver),
+      Grid_Position: toIntOrNull(result.gridPosition),
+      SQ1: result.q1,
+      SQ2: result.q2,
+      SQ3: result.q3,
+    })
+  }
 
   console.log(formattedResults)
 

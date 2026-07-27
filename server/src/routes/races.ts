@@ -15,7 +15,8 @@ import {
   sprintRace,
   teams,
 } from "../../db/migrations/schema.js"
-import { CURRENT_YEAR, SITE_URL } from "../lib/constants.js"
+import { SITE_URL } from "../lib/constants.js"
+import { getCurrentYear } from "../lib/currentYear.js"
 import { BaseApiResponse } from "../lib/definitions.js"
 import {
   apiNotFound,
@@ -112,7 +113,7 @@ interface LastApiResponse extends BaseApiResponse {
 // GET /current
 router.get("/current", async (req: Request, res: Response) => {
   const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`
-  const year = CURRENT_YEAR
+  const year = await getCurrentYear()
   const searchParams = new URL(fullUrl).searchParams
   const { limit, offset } = getLimitAndOffset(searchParams)
   const timezone = searchParams.get("timezone")
@@ -449,7 +450,7 @@ router.get("/current/next", async (req: Request, res: Response) => {
 router.get("/current/last", async (req: Request, res: Response) => {
   const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`
   try {
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
     const today = getDay()
 
     const searchParams = new URL(fullUrl).searchParams
@@ -618,7 +619,7 @@ router.get("/current/last/race", async (req: Request, res: Response) => {
   try {
     const timezone = searchParams.get("timezone")
 
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
     const today = getDay()
 
     const raceData = await db
@@ -757,7 +758,7 @@ router.get("/current/last/qualy", async (req: Request, res: Response) => {
   try {
     const timezone = searchParams.get("timezone")
 
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
     const today = getDay()
 
     const lastRace = await db
@@ -895,7 +896,7 @@ router.get("/current/last/fp1", async (req: Request, res: Response) => {
   const { limit, offset } = getLimitAndOffset(searchParams)
   try {
     const timezone = searchParams.get("timezone")
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
     const today = getDay()
 
     const raceData = await db
@@ -1027,7 +1028,7 @@ router.get("/current/last/fp2", async (req: Request, res: Response) => {
   const { limit, offset } = getLimitAndOffset(searchParams)
   try {
     const timezone = searchParams.get("timezone")
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
     const today = getDay()
 
     const raceData = await db
@@ -1160,7 +1161,7 @@ router.get("/current/last/fp3", async (req: Request, res: Response) => {
   try {
     const timezone = searchParams.get("timezone")
 
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
     const today = getDay()
 
     const raceData = await db
@@ -1294,7 +1295,7 @@ router.get(
     const { limit, offset } = getLimitAndOffset(searchParams)
 
     try {
-      const year = CURRENT_YEAR
+      const year = await getCurrentYear()
       const today = getDay()
 
       const lastSprintRace = await db
@@ -1433,7 +1434,7 @@ router.get(
     try {
       const timezone = searchParams.get("timezone")
 
-      const year = CURRENT_YEAR
+      const year = await getCurrentYear()
       const today = getDay()
 
       const lastSprintQualy = await db

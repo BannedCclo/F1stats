@@ -11,7 +11,8 @@ import {
   sprintRace,
   teams,
 } from "../../db/migrations/schema.js"
-import { CURRENT_YEAR, SITE_URL } from "../lib/constants.js"
+import { SITE_URL } from "../lib/constants.js"
+import { getCurrentYear } from "../lib/currentYear.js"
 import { BaseApiResponse } from "../lib/definitions.js"
 import { apiNotFound, circuitSvg, getLimitAndOffset } from "../lib/utils.js"
 import { getDriverSeasons } from "../lib/participants.js"
@@ -306,7 +307,7 @@ router.get("/current/drivers", async (req: Request, res: Response) => {
   const searchParams = new URL(fullUrl).searchParams
   const { limit, offset } = getLimitAndOffset(searchParams)
   try {
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
 
     const driversData = await db
       .select({
@@ -369,7 +370,7 @@ router.get(
     const searchParams = new URL(fullUrl).searchParams
     const { limit, offset } = getLimitAndOffset(searchParams)
     try {
-      const year = CURRENT_YEAR
+      const year = await getCurrentYear()
       const { driverId } = req.params
 
       const sprintResultsData = await db

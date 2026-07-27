@@ -56,7 +56,7 @@ export const getSprintRaceResults = async (year, race, raceId, page) => {
 
   for (const result of results) {
     const Driver_ID = formatDriver(result.driver)
-    const Team_ID = formatTeam(result.team, result.driver)
+    const Team_ID = await formatTeam(result.team, result.driver)
     // BBC's sprint results table doesn't carry a starting-grid column; the
     // sprint qualifying classification is the best available proxy (it won't
     // reflect a post-qualifying grid penalty, which BBC doesn't publish

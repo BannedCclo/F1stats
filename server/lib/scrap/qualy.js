@@ -56,17 +56,18 @@ export const getQualyResults = async (year, race, raceId, page) => {
     return results.length
   }
 
-  const formattedResults = results.map((result) => {
-    return {
+  const formattedResults = []
+  for (const result of results) {
+    formattedResults.push({
       Race_ID: raceId,
       Driver_ID: formatDriver(result.driver),
-      Team_ID: formatTeam(result.team),
+      Team_ID: await formatTeam(result.team, result.driver),
       Grid_Position: toIntOrNull(result.position),
       Q1: result.q1Time || null,
       Q2: result.q2Time || null,
       Q3: result.q3Time || null,
-    }
-  })
+    })
+  }
 
   console.log(formattedResults)
 

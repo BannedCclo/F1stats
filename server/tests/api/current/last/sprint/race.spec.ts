@@ -1,11 +1,11 @@
-import { CURRENT_YEAR } from "@/lib/constants"
+import { getCurrentYear } from "../../../../../src/lib/currentYear"
 import { test, expect } from "@playwright/test"
 
 test.describe("GET /api/current/[round]/sprint/race", async () => {
   test("should return sprint race data for the current year and round, with default limit and offset", async ({
     request,
   }) => {
-    const response = await request.get(`/api/${CURRENT_YEAR}/5/sprint/race`)
+    const response = await request.get(`/api/${await getCurrentYear()}/5/sprint/race`)
     expect(response.ok()).toBeTruthy()
     expect(response.status()).toBe(200)
 
@@ -40,7 +40,7 @@ test.describe("GET /api/current/[round]/sprint/race", async () => {
     request,
   }) => {
     const response = await request.get(
-      `/api/${CURRENT_YEAR}/5/sprint/race?limit=1&offset=1`
+      `/api/${await getCurrentYear()}/5/sprint/race?limit=1&offset=1`
     )
     expect(response.ok()).toBeTruthy()
     expect(response.status()).toBe(200)
@@ -86,7 +86,7 @@ test.describe("GET /api/current/[round]/sprint/race", async () => {
   })
 
   test("should return 404 when no round are found", async ({ request }) => {
-    const response = await request.get(`/api/${CURRENT_YEAR}/30/sprint/race`)
+    const response = await request.get(`/api/${await getCurrentYear()}/30/sprint/race`)
     expect(response.status()).toBe(404)
 
     const data = await response.json()
@@ -101,7 +101,7 @@ test.describe("GET /api/current/[round]/sprint/race", async () => {
   test("should return 404 when no sprint race are found for this round", async ({
     request,
   }) => {
-    const response = await request.get(`/api/${CURRENT_YEAR}/1/sprint/race`)
+    const response = await request.get(`/api/${await getCurrentYear()}/1/sprint/race`)
     expect(response.status()).toBe(404)
 
     const data = await response.json()

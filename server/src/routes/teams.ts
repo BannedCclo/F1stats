@@ -10,7 +10,8 @@ import {
   results,
   teams,
 } from "../../db/migrations/schema.js"
-import { CURRENT_YEAR, SITE_NAME, SITE_URL } from "../lib/constants.js"
+import { SITE_NAME, SITE_URL } from "../lib/constants.js"
+import { getCurrentYear } from "../lib/currentYear.js"
 import { BaseApiResponse } from "../lib/definitions.js"
 import { apiNotFound, getLimitAndOffset } from "../lib/utils.js"
 
@@ -346,7 +347,7 @@ router.get("/current/teams", async (req: Request, res: Response) => {
   const searchParams = new URL(fullUrl).searchParams
   const { limit, offset } = getLimitAndOffset(searchParams)
   try {
-    const year = CURRENT_YEAR
+    const year = await getCurrentYear()
     const teamsData = await db
       .select({
         teamId: teams.teamId,
@@ -416,7 +417,7 @@ router.get(
   async (req: Request, res: Response) => {
     const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`
     try {
-      const year = CURRENT_YEAR
+      const year = await getCurrentYear()
       const { teamId } = req.params
       const teamData = await db
         .select()
@@ -473,7 +474,7 @@ router.get(
     const searchParams = new URL(fullUrl).searchParams
     const { limit, offset } = getLimitAndOffset(searchParams)
     try {
-      const year = CURRENT_YEAR
+      const year = await getCurrentYear()
       const { teamId } = req.params
 
       const data = await db
