@@ -86,7 +86,7 @@ export default function HeaderSearch() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('nav.search')}
-        className="flex w-full items-center justify-between gap-3 border border-hairline bg-panel px-3 py-2 font-body text-sm text-dim transition-colors hover:border-accent sm:max-w-xs"
+        className="flex w-full items-center justify-between gap-3 border border-hairline bg-panel px-3 py-2 font-body text-sm text-dim transition-colors hover:border-accent sm:max-w-xl"
       >
         <span>{t('search.placeholder')}</span>
         <kbd className="hidden shrink-0 border border-hairline px-1.5 py-0.5 font-data text-[.6875rem] text-dim sm:inline">

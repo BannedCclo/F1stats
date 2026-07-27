@@ -69,7 +69,7 @@ export default function Layout() {
       </a>
 
       <header className="sticky top-0 z-40 border-b border-hairline bg-carbon/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3 px-4 py-3 sm:grid sm:grid-cols-[auto_1fr_auto] sm:px-6">
           <NavLink
             ref={brandRef}
             to="/"
@@ -79,14 +79,14 @@ export default function Layout() {
             {t('brand.name')}
           </NavLink>
 
-          <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
+          <div className="order-3 w-full sm:order-none sm:flex sm:w-full sm:justify-center">
             <HeaderSearch />
           </div>
 
           <div
             role="group"
             aria-label={t('language.label')}
-            className="order-2 ml-auto flex shrink-0 overflow-hidden border border-hairline font-data text-xs sm:order-3 sm:ml-0"
+            className="order-2 ml-auto flex shrink-0 overflow-hidden border border-hairline font-data text-xs sm:order-none sm:ml-0"
           >
             <button
               type="button"
