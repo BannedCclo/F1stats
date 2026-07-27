@@ -9,7 +9,7 @@ interface CircuitTraceProps {
   corners?: number | null
   className?: string
   color?: string
-  /** The API's own curated track outline, when the caller already has it. Preferred over the vendored/abstract fallback. */
+  /** The API's own curated track outline, when the caller already has it. Preferred over the abstract fallback. */
   svg?: { path: string; viewBox: string } | null
   /** Draws the trace in as it scrolls into view instead of rendering it fully drawn. */
   animateOnScroll?: boolean
@@ -23,12 +23,10 @@ function viewBoxWidth(viewBox: string): number {
 }
 
 /**
- * A track silhouette. Prefers the real outline the API itself now curates
- * (`circuit.svg`) when the caller has already fetched it. Falls back to the
- * vendored open-source outlines in realCircuitShapes.ts (see that file for
- * attribution), and finally to an abstract deterministic shape that makes no
- * claim to represent the real layout. A native tooltip on hover discloses
- * which one you're looking at.
+ * A track silhouette. Prefers the real outline the API itself curates
+ * (`circuit.svg`) when the caller has already fetched it, falling back to an
+ * abstract deterministic shape that makes no claim to represent the real
+ * layout. A native tooltip on hover discloses which one you're looking at.
  */
 export default function CircuitTrace({
   circuitId,
@@ -49,7 +47,7 @@ export default function CircuitTrace({
   useMotionPath(animateLap ? pathRef : { current: null }, animateLap ? dotRef : { current: null })
 
   // Real layouts scale their stroke to a fraction of the viewBox width tuned against
-  // the vendored 500-unit source; abstract shapes use a thinner fraction on their 200-unit box.
+  // the API's 500-unit source; abstract shapes use a thinner fraction on their 200-unit box.
   const strokeWidth = viewBoxWidth(viewBox) * (isRealLayout ? 0.028 : 0.015)
 
   return (

@@ -10,7 +10,6 @@
     "start": "tsx src/index.ts",
     "test": "playwright test",
     "insert": "cd lib/insert && node index.js",
-    "insert:circuit-svgs": "node lib/insert/circuitSvgs.js",
     "scrap": "cd lib/scrap && node index.js",
     "populate": "node lib/populate/index.js",
     "sync:check": "node scripts/check-active-sessions.js",

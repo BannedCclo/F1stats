@@ -1,31 +1,10 @@
-import { REAL_CIRCUIT_SHAPES } from './realCircuitShapes'
-
 /**
- * The API's own circuit archive has duplicate entries for several tracks —
- * the same real place under two different circuitIds, one used by recent
- * seasons and another by older ones (confirmed by cross-referencing
- * `/circuits` against race data across seasons: e.g. current-season races
- * use "montmelo" for Barcelona-Catalunya, but most historical seasons use
- * "catalunya" for the exact same circuit). Alias the duplicates onto the
- * one key that actually has shape data, so every season of a real-shaped
- * circuit gets the real shape, not just whichever ID happened to be curated.
- */
-const CIRCUIT_ID_ALIASES: Record<string, string> = {
-  catalunya: 'montmelo',
-  villeneuve: 'gilles_villeneuve',
-  rodriguez: 'hermanos_rodriguez',
-  americas: 'austin',
-  ricard: 'paul_ricard',
-  bahrain: 'bahrein',
-}
-
-/**
- * The API has no track geometry of its own — no coordinates, no map data.
- * For the curated set of circuits in `realCircuitShapes.ts` we use the
- * actual track outline, vendored from an open-source dataset (see that
- * file for attribution/license). Everything else in the archive (which
- * goes back to 1950) falls back to a deterministic abstract shape seeded
- * by circuitId, which makes no claim to represent the real layout.
+ * The API has no track geometry of its own for most of the archive (which
+ * goes back to 1950). Circuits the API itself has curated a real outline for
+ * come back as `circuit.svg` and are rendered directly by CircuitTrace; this
+ * generates the deterministic abstract placeholder shape used for everything
+ * else, seeded by circuitId, which makes no claim to represent the real
+ * layout.
  */
 
 function hashString(str: string): number {
@@ -79,7 +58,7 @@ function smoothClosedPath(points: readonly (readonly [number, number])[]): strin
   return d.join(' ')
 }
 
-function abstractCircuitPath(circuitId: string, corners: number | null | undefined): CircuitTraceData {
+export function generateCircuitPath(circuitId: string, corners: number | null | undefined): CircuitTraceData {
   const rand = mulberry32(hashString(circuitId))
   const pointCount = Math.min(16, Math.max(7, corners ?? 10))
 
@@ -100,13 +79,4 @@ function abstractCircuitPath(circuitId: string, corners: number | null | undefin
   })
 
   return { path: smoothClosedPath(points), viewBox: `0 0 ${size} ${size}`, isRealLayout: false }
-}
-
-export function generateCircuitPath(circuitId: string, corners: number | null | undefined): CircuitTraceData {
-  const resolvedId = CIRCUIT_ID_ALIASES[circuitId] ?? circuitId
-  const real = REAL_CIRCUIT_SHAPES[resolvedId]
-  if (real) {
-    return { path: real.path, viewBox: real.viewBox, isRealLayout: true }
-  }
-  return abstractCircuitPath(circuitId, corners)
 }

@@ -174,45 +174,29 @@ export default function Layout() {
           </RouteTransition>
         </main>
 
-        <footer className="relative z-10 border-t border-hairline px-4 pt-6 pb-12 text-center font-data text-xs text-dim sm:px-6">
-          <p>{t('brand.tagline')} · Data via f1api.dev</p>
-          <p className="mt-1">
-            Circuit outlines by{' '}
-            <a
-              href="https://github.com/julesr0y/f1-circuits-svg"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-accent"
-            >
-              julesr0y/f1-circuits-svg
-            </a>
-            , licensed{' '}
-            <a
-              href="https://creativecommons.org/licenses/by/4.0/"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-accent"
-            >
-              CC BY 4.0
-            </a>
-          </p>
-          <p className="mt-1">
-            Driver photos via{' '}
-            <a href="https://www.wikipedia.org/" target="_blank" rel="noreferrer" className="hover:text-accent">
-              Wikipedia
-            </a>
-            — see each driver's Wikipedia page for the photographer credit and license
-          </p>
-          <p className="mt-1">
-            Flags by{' '}
-            <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noreferrer" className="hover:text-accent">
-              lipis/flag-icons
-            </a>
-            , licensed MIT
-          </p>
-          <div className="mt-3 flex flex-col items-center gap-1">
-            <p>Designed and developed by Marcelo Guimarães</p>
-            <Signature className="w-32 sm:w-36" />
+        <footer className="relative z-10 border-t border-hairline px-4 pt-6 pb-12 font-data text-xs text-dim sm:px-6">
+          <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-4 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
+            <div className="space-y-1">
+              <p>{t('brand.tagline')} · Data via f1api.dev</p>
+              <p>
+                Driver photos via{' '}
+                <a href="https://www.wikipedia.org/" target="_blank" rel="noreferrer" className="hover:text-accent">
+                  Wikipedia
+                </a>
+                — see each driver's Wikipedia page for the photographer credit and license
+              </p>
+              <p>
+                Flags by{' '}
+                <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noreferrer" className="hover:text-accent">
+                  lipis/flag-icons
+                </a>
+                , licensed MIT
+              </p>
+            </div>
+            <div className="flex flex-col items-center gap-1 sm:items-end">
+              <p>Designed and developed by Marcelo Guimarães</p>
+              <Signature className="w-32 sm:w-36" />
+            </div>
           </div>
         </footer>
       </StatusStripProvider>

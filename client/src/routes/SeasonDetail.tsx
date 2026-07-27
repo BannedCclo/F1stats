@@ -55,6 +55,7 @@ export default function SeasonDetail() {
             key={heroRace.raceId}
             circuitId={heroRace.circuit.circuitId}
             corners={heroRace.circuit.corners ?? heroRace.circuit.numberOfCorners}
+            svg={heroRace.circuit.svg}
             className="h-40 w-40 shrink-0 sm:h-48 sm:w-48"
             animateOnScroll
           />
