@@ -212,7 +212,7 @@ export default function Layout() {
           </p>
           <div className="mt-3 flex flex-col items-center gap-1">
             <p>Designed and developed by Marcelo Guimarães</p>
-            <Signature className="w-20 sm:w-24" />
+            <Signature className="w-32 sm:w-36" />
           </div>
         </footer>
       </StatusStripProvider>
