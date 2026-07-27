@@ -165,6 +165,11 @@ const ptBR: Dictionary = {
     pt: 'PT',
     en: 'EN',
   },
+  theme: {
+    label: 'Tema',
+    light: 'Claro',
+    dark: 'Escuro',
+  },
 }
 
 export default ptBR

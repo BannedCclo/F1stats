@@ -73,6 +73,37 @@
   /* The global prefers-reduced-motion block below already crushes this via
      the universal *,*::before,*::after selector — html matches * too. */
   transition: --accent 500ms ease, --accent-contrast 500ms ease;
+
+  /* The @property initial-value above is a fixed dark-mode default. This
+     regular declaration is a lower-specificity fallback that DOES track the
+     current theme (--color-readout/--color-carbon already flip below), and
+     it's what --accent resolves to once useThemeAccent's inline style is
+     removed (no entity to dress the page as). */
+  --accent: var(--color-readout);
+  --accent-contrast: var(--color-carbon);
+}
+
+/* Light mode — same pit-wall monitor, lit from the other side. Toggled by
+   useTheme, which stamps data-theme on <html> (and an inline script in
+   index.html does it before first paint to avoid a flash of the wrong
+   theme). Status colours are deepened slightly here — the dark-mode values
+   are tuned to glow on near-black and don't carry enough contrast on white. */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --color-carbon: #f4f6f8;
+  --color-panel: #ffffff;
+  --color-bezel: #eef1f4;
+  --color-hairline: #d7dce2;
+  --color-readout: #10151c;
+  --color-dim: #5b6672;
+
+  --color-gain: #0f9a52;
+  --color-offpace: #9a6b00;
+}
+
+:root[data-theme='light'] .emissive {
+  text-shadow: 0 0 8px color-mix(in oklab, currentColor 30%, transparent);
 }
 
 html,

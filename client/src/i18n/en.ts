@@ -147,6 +147,7 @@ export interface Dictionary {
   pagination: { previous: string; next: string; page: string }
   notFound: { title: string; body: string; cta: string; radio: string }
   language: { label: string; pt: string; en: string }
+  theme: { label: string; light: string; dark: string }
 }
 
 const en: Dictionary = {
@@ -313,6 +314,11 @@ const en: Dictionary = {
     label: 'Language',
     pt: 'PT',
     en: 'EN',
+  },
+  theme: {
+    label: 'Theme',
+    light: 'Light',
+    dark: 'Dark',
   },
 }
 

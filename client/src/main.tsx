@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.tsx'
 import { queryClient, queryPersister, CACHE_BUSTER } from '@/api/queryClient'
 import { I18nProvider } from '@/i18n/useI18n'
+import { ThemeProvider } from '@/theme/useTheme'
 import LenisProvider from '@/motion/LenisProvider'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
@@ -16,13 +17,15 @@ createRoot(document.getElementById('root')!).render(
         client={queryClient}
         persistOptions={{ persister: queryPersister, buster: CACHE_BUSTER }}
       >
-        <I18nProvider>
-          <LenisProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </LenisProvider>
-        </I18nProvider>
+        <ThemeProvider>
+          <I18nProvider>
+            <LenisProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </LenisProvider>
+          </I18nProvider>
+        </ThemeProvider>
       </PersistQueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,

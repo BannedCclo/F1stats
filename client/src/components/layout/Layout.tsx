@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { animate } from 'animejs'
 import { useI18n } from '@/i18n/useI18n'
+import { useTheme } from '@/theme/useTheme'
 import { prefersReducedMotion } from '@/motion/reducedMotion'
 import { useMagnetic } from '@/motion/useMagnetic'
 import { DURATION, EASE } from '@/motion/motionTokens'
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
 
 export default function Layout() {
   const { t, locale, setLocale } = useI18n()
+  const { theme, setTheme } = useTheme()
   const location = useLocation()
   const navRef = useRef<HTMLElement>(null)
   const markerRef = useRef<HTMLSpanElement>(null)
@@ -83,27 +85,56 @@ export default function Layout() {
             <HeaderSearch />
           </div>
 
-          <div
-            role="group"
-            aria-label={t('language.label')}
-            className="order-2 ml-auto flex shrink-0 overflow-hidden border border-hairline font-data text-xs sm:order-none sm:ml-0"
-          >
-            <button
-              type="button"
-              onClick={() => setLocale('pt-BR')}
-              aria-pressed={locale === 'pt-BR'}
-              className={clsx('px-2 py-1', locale === 'pt-BR' ? 'bg-accent text-accent-contrast' : 'text-dim hover:text-readout')}
+          <div className="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-none sm:ml-0">
+            <div
+              role="group"
+              aria-label={t('theme.label')}
+              className="flex shrink-0 overflow-hidden border border-hairline font-data text-xs"
             >
-              {t('language.pt')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocale('en')}
-              aria-pressed={locale === 'en'}
-              className={clsx('px-2 py-1', locale === 'en' ? 'bg-accent text-accent-contrast' : 'text-dim hover:text-readout')}
+              <button
+                type="button"
+                onClick={() => setTheme('light')}
+                aria-pressed={theme === 'light'}
+                aria-label={t('theme.light')}
+                title={t('theme.light')}
+                className={clsx('px-2 py-1', theme === 'light' ? 'bg-accent text-accent-contrast' : 'text-dim hover:text-readout')}
+              >
+                ☀
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('dark')}
+                aria-pressed={theme === 'dark'}
+                aria-label={t('theme.dark')}
+                title={t('theme.dark')}
+                className={clsx('px-2 py-1', theme === 'dark' ? 'bg-accent text-accent-contrast' : 'text-dim hover:text-readout')}
+              >
+                🌙
+              </button>
+            </div>
+
+            <div
+              role="group"
+              aria-label={t('language.label')}
+              className="flex shrink-0 overflow-hidden border border-hairline font-data text-xs"
             >
-              {t('language.en')}
-            </button>
+              <button
+                type="button"
+                onClick={() => setLocale('pt-BR')}
+                aria-pressed={locale === 'pt-BR'}
+                className={clsx('px-2 py-1', locale === 'pt-BR' ? 'bg-accent text-accent-contrast' : 'text-dim hover:text-readout')}
+              >
+                {t('language.pt')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocale('en')}
+                aria-pressed={locale === 'en'}
+                className={clsx('px-2 py-1', locale === 'en' ? 'bg-accent text-accent-contrast' : 'text-dim hover:text-readout')}
+              >
+                {t('language.en')}
+              </button>
+            </div>
           </div>
         </div>
 
