@@ -10,6 +10,7 @@ import clsx from 'clsx'
 import HeaderSearch from './HeaderSearch'
 import StartLights from './StartLights'
 import RouteTransition from './RouteTransition'
+import Signature from './Signature'
 import { StatusStripProvider } from './StatusStrip'
 
 const NAV_ITEMS = [
@@ -173,7 +174,11 @@ export default function Layout() {
           </RouteTransition>
         </main>
 
-        <footer className="relative z-10 border-t border-hairline px-4 py-6 text-center font-data text-xs text-dim sm:px-6">
+        <footer className="relative z-10 border-t border-hairline px-4 pt-6 pb-12 text-center font-data text-xs text-dim sm:px-6">
+          <div className="mx-auto mb-4 flex w-full flex-col items-center gap-2">
+            <p className="uppercase tracking-wide">Designed and developed by Marcelo Guimarães</p>
+            <Signature className="w-40 max-w-full text-readout sm:w-52" />
+          </div>
           <p>{t('brand.tagline')} · Data via f1api.dev</p>
           <p className="mt-1">
             Circuit outlines by{' '}

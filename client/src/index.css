@@ -171,6 +171,29 @@ body {
   text-shadow: 0 0 12px color-mix(in oklab, currentColor 45%, transparent);
 }
 
+/* Hand-drawn signature: stroke draws itself once in view, currentColor so it
+   tracks the readout/dim tone in both themes without a separate light-mode
+   override. Reduced-motion block above already crushes the animation. */
+.signature-svg {
+  width: 100%;
+  height: auto;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter:
+    drop-shadow(0 0 2px color-mix(in oklab, currentColor 70%, transparent))
+    drop-shadow(0 0 10px color-mix(in oklab, currentColor 45%, transparent));
+}
+
+.signature-svg.animate {
+  animation: signature-draw 1.2s cubic-bezier(0.2, 0.3, 0.6, 0.7) forwards;
+}
+
+@keyframes signature-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* Fixed hairline grid overlay + radial vignette — the monitor bezel */
 .grid-field {
   position: fixed;
