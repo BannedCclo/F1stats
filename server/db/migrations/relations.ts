@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { drivers, driverClassifications, teams, championships, constructorsClassifications, circuits, classifications, races, results, sprintQualy, sprintRace, fp1, fp3, fp2 } from "./schema";
+import { drivers, driverClassifications, teams, championships, constructorsClassifications, seasonEntries, circuits, classifications, races, results, sprintQualy, sprintRace, fp1, fp3, fp2 } from "./schema";
 
 export const driverClassificationsRelations = relations(driverClassifications, ({one}) => ({
 	driver: one(drivers, {
@@ -16,8 +16,24 @@ export const driverClassificationsRelations = relations(driverClassifications, (
 	}),
 }));
 
+export const seasonEntriesRelations = relations(seasonEntries, ({one}) => ({
+	driver: one(drivers, {
+		fields: [seasonEntries.driverId],
+		references: [drivers.driverId]
+	}),
+	team: one(teams, {
+		fields: [seasonEntries.teamId],
+		references: [teams.teamId]
+	}),
+	championship: one(championships, {
+		fields: [seasonEntries.championshipId],
+		references: [championships.championshipId]
+	}),
+}));
+
 export const driversRelations = relations(drivers, ({many}) => ({
 	driverClassifications: many(driverClassifications),
+	seasonEntries: many(seasonEntries),
 	circuits: many(circuits),
 	classifications: many(classifications),
 	races: many(races),
@@ -32,6 +48,7 @@ export const driversRelations = relations(drivers, ({many}) => ({
 export const teamsRelations = relations(teams, ({many}) => ({
 	driverClassifications: many(driverClassifications),
 	constructorsClassifications: many(constructorsClassifications),
+	seasonEntries: many(seasonEntries),
 	circuits: many(circuits),
 	classifications: many(classifications),
 	races: many(races),
@@ -46,6 +63,7 @@ export const teamsRelations = relations(teams, ({many}) => ({
 export const championshipsRelations = relations(championships, ({many}) => ({
 	driverClassifications: many(driverClassifications),
 	constructorsClassifications: many(constructorsClassifications),
+	seasonEntries: many(seasonEntries),
 	races: many(races),
 }));
 

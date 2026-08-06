@@ -14,7 +14,8 @@
     "populate": "node lib/populate/index.js",
     "sync:check": "node scripts/check-active-sessions.js",
     "sync:run": "node scripts/sync-active-sessions.js",
-    "sync:season": "node scripts/sync-season-entities.js"
+    "sync:season": "node scripts/sync-season-entities.js",
+    "sync:season-refresh": "node scripts/sync-season-refresh.js"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.5",

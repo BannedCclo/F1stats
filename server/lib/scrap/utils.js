@@ -53,7 +53,26 @@ export const formatDriver = (driver) => {
 // this stays correct without any per-season maintenance once the
 // season-entities sync (lib/sync/seasonEntities.js) has populated this
 // year's driver_classifications.
+//
+// Checks season_entries first: it's fed straight from f1api.dev's driver
+// list (server/lib/sync/seasonRefresh.js) and lands before the season's
+// first classification row exists, so it's the only source that's correct
+// in the pre-season window — the driver_classifications fallback below
+// would otherwise report last year's team for anyone who switched over the
+// winter, right when session-sync most needs to get round 1 correct.
 async function currentTeamForDriver(driverId) {
+  const seasonEntry = await clientWriter.execute({
+    sql: `
+      SELECT se.team_id AS team_id
+      FROM season_entries se
+      JOIN championships c ON c.championship_id = se.championship_id
+      WHERE se.driver_id = :driver_id AND se.team_id IS NOT NULL
+      ORDER BY c.year DESC
+      LIMIT 1`,
+    args: { driver_id: driverId },
+  })
+  if (seasonEntry.rows[0]?.team_id) return seasonEntry.rows[0].team_id
+
   const { rows } = await clientWriter.execute({
     sql: `
       SELECT dc.team_id AS team_id
