@@ -1,0 +1,43 @@
+name: Season refresh
+
+# Fills in fields on drivers/teams/circuits that already exist but were still
+# NULL upstream when we first saw them (a new circuit's lap_record lands weeks
+# after the circuit itself is announced), and keeps season_entries — which
+# team each driver is on this season — current. Sibling to
+# season-entities-sync.yml, which only ever onboards new rows and never
+# touches existing ones; see server/lib/f1apiRefresh.js for the exact
+# "fill nulls only" write policy.
+#
+# Roster churn is heaviest from the November testing announcements through
+# the first race weekend, so this runs twice daily in that window and once
+# daily the rest of the year. No browser needed here (plain f1api.dev
+# fetches), so — like season-entities-sync.yml — there's no Playwright
+# install step.
+on:
+  schedule:
+    - cron: "5 5 * 11,12,1,2,3 *"
+    - cron: "5 17 * 11,12,1,2,3 *"
+    - cron: "5 5 * 4,5,6,7,8,9,10 *"
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+
+      - name: Refresh existing season entities and roster
+        run: npm run sync:season-refresh
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

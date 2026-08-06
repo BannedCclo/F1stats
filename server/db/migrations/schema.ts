@@ -1,4 +1,4 @@
-import { pgTable, integer, real, serial, text, unique } from "drizzle-orm/pg-core"
+import { pgTable, integer, real, serial, text, timestamp, unique } from "drizzle-orm/pg-core"
 
 export const championships = pgTable("championships", {
 	championshipId: text("championship_id").primaryKey(),
@@ -49,6 +49,18 @@ export const constructorsClassifications = pgTable("constructors_classifications
 	wins: integer("wins"),
 }, (table) => [
 	unique().on(table.championshipId, table.teamId),
+]);
+
+// Who's entered this championship and for which team — distinct from
+// driverClassifications (points/position), see db/migrations/0005_season_entries.sql.
+export const seasonEntries = pgTable("season_entries", {
+	seasonEntryId: serial("season_entry_id").primaryKey(),
+	championshipId: text("championship_id").references(() => championships.championshipId),
+	driverId: text("driver_id").references(() => drivers.driverId),
+	teamId: text("team_id").references(() => teams.teamId),
+	lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+	unique().on(table.championshipId, table.driverId),
 ]);
 
 export const circuits = pgTable("circuits", {

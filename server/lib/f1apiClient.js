@@ -61,7 +61,9 @@ export async function safeExecute(label, sql, args) {
 // Every upsert here is ON CONFLICT DO NOTHING: safe to call repeatedly with
 // the same id, but deliberately never refreshes a field on a row that
 // already exists (a full historical re-sync isn't what either caller wants
-// mid-season — see the checkpoint handling in lib/populate/index.js).
+// mid-season — see the checkpoint handling in lib/populate/index.js). For the
+// pre-season refresh job's opposite policy (fill-null-only updates on
+// existing rows), see lib/f1apiRefresh.js instead.
 
 export async function upsertDriver(d) {
   if (!d?.driverId) return
