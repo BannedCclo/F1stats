@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { animate } from 'animejs'
 import { useI18n } from '@/i18n/useI18n'
 import { useTheme } from '@/theme/useTheme'
@@ -10,7 +10,8 @@ import clsx from 'clsx'
 import HeaderSearch from './HeaderSearch'
 import StartLights from './StartLights'
 import RouteTransition from './RouteTransition'
-import Signature from './Signature'
+import Footer from './Footer'
+import FooterCredits from './FooterCredits'
 import { StatusStripProvider } from './StatusStrip'
 
 const NAV_ITEMS = [
@@ -174,31 +175,19 @@ export default function Layout() {
           </RouteTransition>
         </main>
 
-        <footer className="relative z-10 border-t border-hairline px-4 pt-6 pb-12 font-data text-xs text-dim sm:px-6">
-          <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-4 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
-            <div className="space-y-1">
-              <p>{t('brand.tagline')} · Data via f1api.dev</p>
-              <p>
-                Driver photos via{' '}
-                <a href="https://www.wikipedia.org/" target="_blank" rel="noreferrer" className="hover:text-accent">
-                  Wikipedia
-                </a>
-                — see each driver's Wikipedia page for the photographer credit and license
-              </p>
-              <p>
-                Flags by{' '}
-                <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noreferrer" className="hover:text-accent">
-                  lipis/flag-icons
-                </a>
-                , licensed MIT
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-1 sm:items-end">
-              <p>Designed and developed by Marcelo Guimarães</p>
-              <Signature className="w-32 sm:w-36" />
-            </div>
-          </div>
-        </footer>
+        <Footer
+          logo={
+            <Link
+              to="/"
+              className="display-wide flex shrink-0 items-center gap-2 font-display text-2xl font-extrabold uppercase tracking-tight text-readout"
+            >
+              <span className="h-3.5 w-3.5 bg-rosso" aria-hidden="true" />
+              {t('brand.name')}
+            </Link>
+          }
+        >
+          <FooterCredits />
+        </Footer>
       </StatusStripProvider>
     </div>
   )
